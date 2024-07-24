@@ -29,21 +29,22 @@ The API uses a single table to store user information:
 ## API Endpoints
 
 ### Create User
-- **URL:** `/users`
+- **URL:** `/user`
 - **Method:** POST
 - **Request Body:**
   ```json
   {
-    "email": "string",
-    "password": "string",
+    "email"     : "string",
+    "password"  : "string",
     "first_name": "string",
-    "last_name": "string"
+    "last_name" : "string",
+    "nick_name" : "string"
   }
 
 - Response: 201 Created with the created user ID
 
 ### Get User Profile
-- **URL:** `/users/{id}`
+- **URL:** `/user/{id}`
 - **Method:** GET
 - **Response:**
   ```json

@@ -4,9 +4,9 @@ import "time"
 
 type User struct {
 	ID        uint `gorm:"primaryKey"`
+	Email     string
 	FirstName string
 	LastName  string
-	Nickname  string
 	Password  string
 	CreatedAt time.Time
 	UpdatedAt time.Time

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
@@ -16,9 +17,10 @@ type ErrorResponse struct {
 
 func (srv *server) createUserHandler() http.HandlerFunc {
 	type CreateUserRequest struct {
-		FirstName string
-		LastName  string
-		Nickname  string
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Password  string `json:"password"`
 	}
 
 	type CreateUserResponse struct {
@@ -34,11 +36,19 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
+		hash, err := passwords.HashPassword(createUserRequest.Password)
+		if err != nil {
+			srv.logger.Error(err)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+			return
+		}
+
 		userService := services.NewUserService(srv.db, srv.logger)
 		user := &models.User{
+			Email:     createUserRequest.Email,
 			FirstName: createUserRequest.FirstName,
 			LastName:  createUserRequest.LastName,
-			Nickname:  createUserRequest.Nickname,
+			Password:  hash,
 		}
 		userId, err := userService.CreateUser(r.Context(), user)
 		if err != nil {
