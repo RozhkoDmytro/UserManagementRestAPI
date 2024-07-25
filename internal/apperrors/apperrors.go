@@ -42,6 +42,18 @@ var (
 		Code:     "INSERTION_ERR_FAILED",
 		HTTPCode: http.StatusInternalServerError,
 	}
+
+	DeletionFailedErr = AppError{
+		Message:  "Deletion failed",
+		Code:     "DELETION_FAILED",
+		HTTPCode: 500,
+	}
+
+	NoRecordFoundErr = AppError{
+		Message:  "No record found",
+		Code:     "NO_RECORD_FOUND",
+		HTTPCode: 404,
+	}
 )
 
 func (appError *AppError) Error() string {

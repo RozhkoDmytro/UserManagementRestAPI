@@ -52,6 +52,7 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 			LastName:  createUserRequest.LastName,
 			Password:  hash,
 		}
+
 		userId, err := userService.CreateUser(r.Context(), user)
 		if err != nil {
 			srv.logger.Error(err)
@@ -62,6 +63,32 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 
 		createUserResponse := &CreateUserResponse{UserId: userId}
 		srv.respond(w, createUserResponse, http.StatusCreated)
+	}
+}
+
+func (srv *server) deleteUser() http.HandlerFunc {
+	type CreateUserResponse struct {
+		UserID    uint
+		DeletedAt time.Time
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		userID := vars["id"]
+
+		userService := services.NewUserService(srv.db, srv.logger)
+		user, err := userService.DeleteUser(r.Context(), userID)
+		if err != nil {
+			srv.logger.Error(err)
+			appErrors := err.(*apperrors.AppError)
+			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+			return
+		}
+		res := &CreateUserResponse{
+			UserID:    user.ID,
+			DeletedAt: user.DeletedAt,
+		}
+		srv.respond(w, res, http.StatusOK)
 	}
 }
 
@@ -98,6 +125,94 @@ func (srv *server) getUser() http.HandlerFunc {
 			UpdatedAt: user.UpdatedAt,
 		}
 		srv.respond(w, res, http.StatusCreated)
+	}
+}
+
+func (srv *server) updateUser() http.HandlerFunc {
+	type CreateUserRequet struct {
+		Email     string `json:"email"`
+		FirstName string `json:"first_name"`
+		LastName  string `json:"last_name"`
+		Password  string `json:"password"`
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		userID := vars["id"]
+
+		createUserRequest := &CreateUserRequet{}
+		err := srv.decode(r, createUserRequest)
+		if err != nil {
+			srv.logger.Error(err)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+			return
+		}
+
+		hash, err := passwords.HashPassword(createUserRequest.Password)
+		if err != nil {
+			srv.logger.Error(err)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+			return
+		}
+
+		updatedData := &models.User{
+			Email:     createUserRequest.Email,
+			FirstName: createUserRequest.FirstName,
+			LastName:  createUserRequest.LastName,
+			Password:  hash,
+		}
+
+		userService := services.NewUserService(srv.db, srv.logger)
+		_, err = userService.UpdateUser(r.Context(), userID, updatedData)
+		if err != nil {
+			srv.logger.Error(err)
+			appErrors := err.(*apperrors.AppError)
+			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+			return
+		}
+
+		srv.respond(w, nil, http.StatusCreated)
+	}
+}
+
+func (srv *server) listUsers() http.HandlerFunc {
+	type CreateUserResponse struct {
+		UserID    uint
+		Email     string
+		FirstName string
+		LastName  string
+
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		queryParams := r.URL.Query()
+
+		page := queryParams.Get("page")
+		pageSize := queryParams.Get("pageSize")
+
+		userService := services.NewUserService(srv.db, srv.logger)
+		users, err := userService.ListUsers(r.Context(), page, pageSize)
+		if err != nil {
+			srv.logger.Error(err)
+			appErrors := err.(*apperrors.AppError)
+			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+			return
+		}
+
+		// convert models into struct
+		var res []CreateUserResponse
+		for _, item := range users {
+			res = append(res, CreateUserResponse{
+				UserID:    item.ID,
+				Email:     item.Email,
+				FirstName: item.FirstName,
+				LastName:  item.LastName,
+
+				CreatedAt: item.CreatedAt,
+				UpdatedAt: item.UpdatedAt,
+			})
+		}
+		srv.respond(w, res, http.StatusOK)
 	}
 }
 

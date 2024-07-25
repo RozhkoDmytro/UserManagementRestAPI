@@ -1,14 +1,17 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type Router interface {
 	ServeHttp(w http.ResponseWriter, r *http.Request)
 	Get(string, http.HandlerFunc)
 	Post(string, http.HandlerFunc)
+	Delete(string, http.HandlerFunc)
+	Update(string, http.HandlerFunc)
 }
 
 type router struct {
@@ -25,4 +28,12 @@ func (router *router) Get(path string, handlerFunc http.HandlerFunc) {
 
 func (router *router) Post(path string, handlerFunc http.HandlerFunc) {
 	router.mux.HandleFunc(path, handlerFunc).Methods(http.MethodPost)
+}
+
+func (router *router) Delete(path string, handlerFunc http.HandlerFunc) {
+	router.mux.HandleFunc(path, handlerFunc).Methods(http.MethodDelete)
+}
+
+func (router *router) Update(path string, handlerFunc http.HandlerFunc) {
+	router.mux.HandleFunc(path, handlerFunc).Methods(http.MethodPut)
 }

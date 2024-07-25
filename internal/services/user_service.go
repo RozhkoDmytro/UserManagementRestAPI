@@ -43,3 +43,45 @@ func (service *UserService) GetUser(ctx context.Context, userID string) (user *m
 
 	return user, nil
 }
+
+func (service *UserService) DeleteUser(ctx context.Context, userID string) (user *models.User, err error) {
+	user, err = service.userRepo.DeleteUser(ctx, userID)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (service *UserService) UpdateUser(ctx context.Context, userID string, updatedData *models.User) (user *models.User, err error) {
+	user, err = service.userRepo.UpdateUser(ctx, userID, updatedData)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (service *UserService) ListUsers(ctx context.Context, page, pageSize string) (user []models.User, err error) {
+	intPage, err := strconv.Atoi(page)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	intPageSize, err := strconv.Atoi(pageSize)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	user, err = service.userRepo.ListUsers(ctx, intPage, intPageSize)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	return user, nil
+}
