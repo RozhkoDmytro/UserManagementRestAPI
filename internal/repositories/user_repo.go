@@ -33,3 +33,15 @@ func (repo *UserRepo) CreateUser(ctx context.Context, user *models.User) (*model
 
 	return user, nil
 }
+
+func (repo *UserRepo) GetUser(ctx context.Context, userID string) (*models.User, error) {
+	var user models.User
+	tx := repo.db.WithContext(ctx)
+	result := tx.First(&user, "id = ?", userID)
+	if result.Error != nil {
+		repo.logger.Error(result.Error)
+		return nil, apperrors.InsertionFailedErr.AppendMessage(tx.Error)
+	}
+
+	return &user, nil
+}

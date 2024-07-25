@@ -33,3 +33,13 @@ func (service *UserService) CreateUser(ctx context.Context, user *models.User) (
 
 	return strconv.Itoa(int(insertedUser.ID)), nil
 }
+
+func (service *UserService) GetUser(ctx context.Context, userID string) (user *models.User, err error) {
+	user, err = service.userRepo.GetUser(ctx, userID)
+	if err != nil {
+		service.logger.Error(err)
+		return nil, err
+	}
+
+	return user, nil
+}

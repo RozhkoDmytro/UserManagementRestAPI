@@ -11,7 +11,7 @@ func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 		defer cancel()
 
-		r.WithContext(ctx)
+		r = r.WithContext(ctx) // Use the returned request with the new context
 		h(w, r)
 	}
 }

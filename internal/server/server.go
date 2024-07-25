@@ -27,6 +27,7 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (srv *server) initializeRoutes() {
 	srv.router.Post("/user", srv.contextExpire(srv.createUserHandler()))
+	srv.router.Get("/user/{id}", srv.contextExpire(srv.getUser()))
 }
 
 func Run() {

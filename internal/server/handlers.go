@@ -3,7 +3,9 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
+	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
 
@@ -60,6 +62,42 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 
 		createUserResponse := &CreateUserResponse{UserId: userId}
 		srv.respond(w, createUserResponse, http.StatusCreated)
+	}
+}
+
+func (srv *server) getUser() http.HandlerFunc {
+	type CreateUserResponse struct {
+		UserID    uint
+		Email     string
+		FirstName string
+		LastName  string
+
+		CreatedAt time.Time
+		UpdatedAt time.Time
+	}
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		userID := vars["id"]
+
+		userService := services.NewUserService(srv.db, srv.logger)
+		user, err := userService.GetUser(r.Context(), userID)
+		if err != nil {
+			srv.logger.Error(err)
+			appErrors := err.(*apperrors.AppError)
+			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+			return
+		}
+
+		res := &CreateUserResponse{
+			UserID:    user.ID,
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			CreatedAt: user.CreatedAt,
+			UpdatedAt: user.UpdatedAt,
+		}
+		srv.respond(w, res, http.StatusCreated)
 	}
 }
 
