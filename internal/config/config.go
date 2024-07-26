@@ -12,6 +12,7 @@ import (
 type Config struct {
 	AppPort  string `required:"true" split_words:"true"`
 	Postgres *PostgresConfig
+	Baseauth *BaseauthConfig
 }
 
 type PostgresConfig struct {
@@ -20,6 +21,10 @@ type PostgresConfig struct {
 	Password string
 	Dbname   string
 	Timezone string
+}
+type BaseauthConfig struct {
+	Username string
+	Password string
 }
 
 func NewConfig() (*Config, error) {

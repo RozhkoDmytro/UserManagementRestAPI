@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
@@ -19,10 +20,10 @@ type ErrorResponse struct {
 
 func (srv *server) createUserHandler() http.HandlerFunc {
 	type CreateUserRequest struct {
-		Email     string `json:"email"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Password  string `json:"password"`
+		Email     string `json:"email" validate:"required,email"`
+		FirstName string `json:"first_name" validate:"required"`
+		LastName  string `json:"last_name" validate:"required"`
+		Password  string `json:"password" validate:"required,min=8,password"`
 	}
 
 	type CreateUserResponse struct {
@@ -34,6 +35,16 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 		err := srv.decode(r, createUserRequest)
 		if err != nil {
 			srv.logger.Error(err)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+			return
+		}
+
+		// Validate the User struct
+		err = srv.validate.Struct(createUserRequest)
+		if err != nil {
+			// Validation failed, handle the error
+			errors := err.(validator.ValidationErrors)
+			srv.logger.Error(errors)
 			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
 			return
 		}
@@ -129,20 +140,30 @@ func (srv *server) getUser() http.HandlerFunc {
 }
 
 func (srv *server) updateUser() http.HandlerFunc {
-	type CreateUserRequet struct {
-		Email     string `json:"email"`
-		FirstName string `json:"first_name"`
-		LastName  string `json:"last_name"`
-		Password  string `json:"password"`
+	type CreateUserRequest struct {
+		Email     string `json:"email" validate:"required,email"`
+		FirstName string `json:"first_name" validate:"required"`
+		LastName  string `json:"last_name" validate:"required"`
+		Password  string `json:"password" validate:"required,min=8,password"`
 	}
+
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		userID := vars["id"]
 
-		createUserRequest := &CreateUserRequet{}
+		createUserRequest := &CreateUserRequest{}
 		err := srv.decode(r, createUserRequest)
 		if err != nil {
 			srv.logger.Error(err)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+			return
+		}
+		// Validate the User struct
+		err = srv.validate.Struct(createUserRequest)
+		if err != nil {
+			// Validation failed, handle the error
+			errors := err.(validator.ValidationErrors)
+			srv.logger.Error(errors)
 			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
 			return
 		}
