@@ -1,0 +1,12 @@
+\connect postgres;
+
+CREATE TABLE  IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+	email VARCHAR(255),
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    password VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE
+);

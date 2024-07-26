@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: usermanagement
+    ports:
+      - "50052:50052"
+    depends_on:
+      - postgres
+    environment:
+      POSTGRES_URI: postgres://postgres:password@postgres:5432/postgres
+    networks:
+      - go-postgres-network
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - go-postgres-network
+
+volumes:
+  postgres-data:
+
+networks:
+  go-postgres-network:

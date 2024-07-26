@@ -1,4 +1,5 @@
-config/config.env
+.configs/config.env
 # Ignore the .vscode folder
 .vscode/
 *.log
+.netrc
