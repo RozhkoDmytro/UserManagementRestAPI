@@ -209,14 +209,13 @@ func (srv *server) listUsers() http.HandlerFunc {
 		queryParams := r.URL.Query()
 
 		page := queryParams.Get("page")
-		pageSize := queryParams.Get("pageSize")
+		pageSize := queryParams.Get("page_size")
 
 		userService := services.NewUserService(srv.db, srv.logger)
 		users, err := userService.ListUsers(r.Context(), page, pageSize)
 		if err != nil {
 			srv.logger.Error(err)
-			appErrors := err.(*apperrors.AppError)
-			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
 			return
 		}
 
