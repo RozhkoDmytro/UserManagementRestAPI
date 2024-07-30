@@ -76,7 +76,7 @@ func TestCreateUserHandler(t *testing.T) {
 		mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("1", nil)
 
 		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwoSrd123!"}`
-		req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBufferString(reqBody))
+		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		w := httptest.NewRecorder()
 
@@ -87,7 +87,7 @@ func TestCreateUserHandler(t *testing.T) {
 
 	t.Run("invalid request", func(t *testing.T) {
 		reqBody := `{"email":"test@example.com"}`
-		req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBufferString(reqBody))
+		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
@@ -106,7 +106,7 @@ func TestDeleteUserHandler(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(&models.User{ID: 7, DeletedAt: time.Now()}, nil)
 
-		req := httptest.NewRequest(http.MethodDelete, "/user/7", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/users/7", nil)
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		req = mux.SetURLVars(req, map[string]string{"id": "7"})
 		w := httptest.NewRecorder()
@@ -119,7 +119,7 @@ func TestDeleteUserHandler(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
 
-		req := httptest.NewRequest(http.MethodDelete, "/user/999", nil)
+		req := httptest.NewRequest(http.MethodDelete, "/users/999", nil)
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
 		w := httptest.NewRecorder()
@@ -162,7 +162,7 @@ func TestGetUserHandler(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
 
-		req := httptest.NewRequest(http.MethodGet, "/user/999", nil)
+		req := httptest.NewRequest(http.MethodGet, "/users/999", nil)
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
 		w := httptest.NewRecorder()
@@ -191,9 +191,9 @@ func TestUpdateUserHandler(t *testing.T) {
 		}, nil)
 
 		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwor!!Gd123"}`
-		req := httptest.NewRequest(http.MethodPut, "/users/1", bytes.NewBufferString(reqBody))
+		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
-		req = mux.SetURLVars(req, map[string]string{"id": "7"})
+		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
@@ -203,9 +203,9 @@ func TestUpdateUserHandler(t *testing.T) {
 
 	t.Run("invalid request", func(t *testing.T) {
 		reqBody := `{"email":"test@example.com"}`
-		req := httptest.NewRequest(http.MethodPut, "/users/1", bytes.NewBufferString(reqBody))
+		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
-		req = mux.SetURLVars(req, map[string]string{"id": "1"})
+		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)

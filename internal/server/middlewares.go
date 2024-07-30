@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
+func (srv *server) basicAuth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 		defer cancel()
@@ -36,6 +36,16 @@ func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
 			return
 		}
+
+		r = r.WithContext(ctx) // Use the returned request with the new context
+		h(w, r)
+	}
+}
+
+func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
+		defer cancel()
 
 		r = r.WithContext(ctx) // Use the returned request with the new context
 		h(w, r)
