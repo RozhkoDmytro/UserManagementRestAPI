@@ -12,7 +12,7 @@ import (
 )
 
 type UserService struct {
-	userRepo *repositories.UserRepo
+	userRepo repositories.UserRepoInterface
 	logger   *zap.SugaredLogger
 }
 
@@ -24,7 +24,7 @@ type UserServiceInterface interface {
 	ListUsers(ctx context.Context, page, pageSize string) ([]models.User, error)
 }
 
-func NewUserService(userRepo *repositories.UserRepo, logger *zap.SugaredLogger) UserServiceInterface {
+func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
 	return &UserService{
 		userRepo: userRepo,
 		logger:   logger,

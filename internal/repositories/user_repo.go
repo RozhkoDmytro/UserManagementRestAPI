@@ -17,6 +17,14 @@ type UserRepo struct {
 	logger *zap.SugaredLogger
 }
 
+type UserRepoInterface interface {
+	CreateUser(ctx context.Context, user *models.User) (*models.User, error)
+	GetUser(ctx context.Context, userID string) (*models.User, error)
+	DeleteUser(ctx context.Context, userID string) (*models.User, error)
+	UpdateUser(ctx context.Context, userID string, updatedData *models.User) (*models.User, error)
+	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
+}
+
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
 	return &UserRepo{
 		db:     db,
