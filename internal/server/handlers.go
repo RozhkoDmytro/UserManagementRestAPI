@@ -172,6 +172,23 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, users, http.StatusOK)
 }
 
+func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
+	type CreateUserResponse struct {
+		Count uint `json:"count"`
+	}
+	ctx := r.Context()
+	count, err := srv.userService.CountUsers(ctx)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
+	}
+	res := &CreateUserResponse{
+		Count: uint(count),
+	}
+	srv.respond(w, res, http.StatusOK)
+}
+
 func (srv *server) decode(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }

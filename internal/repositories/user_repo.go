@@ -23,6 +23,7 @@ type UserRepoInterface interface {
 	DeleteUser(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, updatedData *models.User) (*models.User, error)
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
+	CountUsers(ctx context.Context) (int, error)
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -122,4 +123,15 @@ func (repo *UserRepo) ListUsers(ctx context.Context, page int, pageSize int) ([]
 	}
 
 	return users, nil
+}
+
+func (repo *UserRepo) CountUsers(ctx context.Context) (int, error) {
+	var count int64
+	tx := repo.db.WithContext(ctx)
+	result := tx.Model(&models.User{}).Where("deleted_at = ?", time.Time{}).Count(&count)
+	if result.Error != nil {
+		repo.logger.Error(result.Error)
+		return 0, apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
+	}
+	return int(count), nil
 }

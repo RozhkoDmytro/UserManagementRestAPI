@@ -22,6 +22,7 @@ type UserServiceInterface interface {
 	GetUser(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, user *models.User) (*models.User, error)
 	ListUsers(ctx context.Context, page, pageSize string) ([]models.User, error)
+	CountUsers(ctx context.Context) (int, error)
 }
 
 func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
@@ -91,4 +92,14 @@ func (service *UserService) ListUsers(ctx context.Context, page, pageSize string
 	}
 
 	return user, nil
+}
+
+func (service *UserService) CountUsers(ctx context.Context) (int, error) {
+	count, err := service.userRepo.CountUsers(ctx)
+	if err != nil {
+		service.logger.Error(err)
+		return 0, err
+	}
+
+	return count, nil
 }
