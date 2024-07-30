@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
 
@@ -56,7 +57,7 @@ func Run() {
 		logger.Sugar().Fatal(err)
 	}
 
-	userService := services.NewUserService(db, logger.Sugar())
+	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
 
 	// Initialize validator
 	validate := validator.New()

@@ -9,7 +9,6 @@ import (
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type UserService struct {
@@ -25,9 +24,9 @@ type UserServiceInterface interface {
 	ListUsers(ctx context.Context, page, pageSize string) ([]*models.User, error)
 }
 
-func NewUserService(db *gorm.DB, logger *zap.SugaredLogger) *UserService {
+func NewUserService(userRepo *repositories.UserRepo, logger *zap.SugaredLogger) *UserService {
 	return &UserService{
-		userRepo: repositories.NewUserRepo(db, logger),
+		userRepo: userRepo,
 		logger:   logger,
 	}
 }
