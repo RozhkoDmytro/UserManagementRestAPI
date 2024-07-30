@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
 
 	"go.uber.org/zap"
@@ -18,11 +19,12 @@ import (
 )
 
 type server struct {
-	db       *gorm.DB
-	router   Router
-	logger   *zap.SugaredLogger
-	validate *validator.Validate
-	cfg      *config.Config
+	db          *gorm.DB
+	router      Router
+	logger      *zap.SugaredLogger
+	validate    *validator.Validate
+	cfg         *config.Config
+	userService *services.UserService
 }
 
 func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -54,17 +56,20 @@ func Run() {
 		logger.Sugar().Fatal(err)
 	}
 
+	userService := services.NewUserService(db, logger.Sugar())
+
 	// Initialize validator
 	validate := validator.New()
 	validate.RegisterValidation("password", myValidate.Password)
 
 	srvRouter := &router{mux: mux.NewRouter()}
 	srv := &server{
-		db:       db,
-		router:   srvRouter,
-		logger:   logger.Sugar(),
-		validate: validate,
-		cfg:      cfg,
+		db:          db,
+		router:      srvRouter,
+		logger:      logger.Sugar(),
+		validate:    validate,
+		cfg:         cfg,
+		userService: userService,
 	}
 	srv.initializeRoutes()
 

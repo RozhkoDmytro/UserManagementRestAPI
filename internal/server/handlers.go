@@ -11,7 +11,6 @@ import (
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
-	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 )
 
 type ErrorResponse struct {
@@ -56,7 +55,6 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 			return
 		}
 
-		userService := services.NewUserService(srv.db, srv.logger)
 		user := &models.User{
 			Email:     createUserRequest.Email,
 			FirstName: createUserRequest.FirstName,
@@ -64,7 +62,7 @@ func (srv *server) createUserHandler() http.HandlerFunc {
 			Password:  hash,
 		}
 
-		userId, err := userService.CreateUser(r.Context(), user)
+		userId, err := srv.userService.CreateUser(r.Context(), user)
 		if err != nil {
 			srv.logger.Error(err)
 			appErrors := err.(*apperrors.AppError)
@@ -87,8 +85,7 @@ func (srv *server) deleteUser() http.HandlerFunc {
 		vars := mux.Vars(r)
 		userID := vars["id"]
 
-		userService := services.NewUserService(srv.db, srv.logger)
-		user, err := userService.DeleteUser(r.Context(), userID)
+		user, err := srv.userService.DeleteUser(r.Context(), userID)
 		if err != nil {
 			srv.logger.Error(err)
 			appErrors := err.(*apperrors.AppError)
@@ -118,8 +115,7 @@ func (srv *server) getUser() http.HandlerFunc {
 		vars := mux.Vars(r)
 		userID := vars["id"]
 
-		userService := services.NewUserService(srv.db, srv.logger)
-		user, err := userService.GetUser(r.Context(), userID)
+		user, err := srv.userService.GetUser(r.Context(), userID)
 		if err != nil {
 			srv.logger.Error(err)
 			appErrors := err.(*apperrors.AppError)
@@ -182,8 +178,7 @@ func (srv *server) updateUser() http.HandlerFunc {
 			Password:  hash,
 		}
 
-		userService := services.NewUserService(srv.db, srv.logger)
-		_, err = userService.UpdateUser(r.Context(), userID, updatedData)
+		_, err = srv.userService.UpdateUser(r.Context(), userID, updatedData)
 		if err != nil {
 			srv.logger.Error(err)
 			appErrors := err.(*apperrors.AppError)
@@ -211,8 +206,7 @@ func (srv *server) listUsers() http.HandlerFunc {
 		page := queryParams.Get("page")
 		pageSize := queryParams.Get("page_size")
 
-		userService := services.NewUserService(srv.db, srv.logger)
-		users, err := userService.ListUsers(r.Context(), page, pageSize)
+		users, err := srv.userService.ListUsers(r.Context(), page, pageSize)
 		if err != nil {
 			srv.logger.Error(err)
 			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
