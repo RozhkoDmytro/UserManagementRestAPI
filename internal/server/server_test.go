@@ -18,6 +18,7 @@ import (
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/database"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
+	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
 	"go.uber.org/zap"
@@ -46,6 +47,7 @@ func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *server) 
 	if err != nil {
 		logger.Sugar().Fatal(err)
 	}
+	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
 
 	// Initialize validator
 	validate := validator.New()
@@ -53,11 +55,12 @@ func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *server) 
 
 	srvRouter := &router{mux: mux.NewRouter()}
 	srv := &server{
-		db:       db,
-		router:   srvRouter,
-		logger:   logger.Sugar(),
-		validate: validate,
-		cfg:      cfg,
+		db:          db,
+		router:      srvRouter,
+		logger:      logger.Sugar(),
+		validate:    validate,
+		cfg:         cfg,
+		userService: userService,
 	}
 	return mockUserService, srv
 }
@@ -70,8 +73,6 @@ func encodeBasicAuth(username, password string) string {
 func TestCreateUserHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
 
-	handler := srv.createUserHandler()
-
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("1", nil)
 
@@ -80,7 +81,8 @@ func TestCreateUserHandler(t *testing.T) {
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.createUserHandler(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -90,7 +92,8 @@ func TestCreateUserHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.createUserHandler(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -101,8 +104,6 @@ func TestCreateUserHandler(t *testing.T) {
 func TestDeleteUserHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
 
-	handler := srv.deleteUser()
-
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(&models.User{ID: 7, DeletedAt: time.Now()}, nil)
 
@@ -111,7 +112,8 @@ func TestDeleteUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "7"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.deleteUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
@@ -124,7 +126,8 @@ func TestDeleteUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.deleteUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
@@ -136,8 +139,6 @@ func TestDeleteUserHandler(t *testing.T) {
 
 func TestGetUserHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
-
-	handler := srv.getUser()
 
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.User{
@@ -154,7 +155,8 @@ func TestGetUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.getUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -167,7 +169,8 @@ func TestGetUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.getUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
@@ -177,8 +180,6 @@ func TestGetUserHandler(t *testing.T) {
 
 func TestUpdateUserHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
-
-	handler := srv.updateUser()
 
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(&models.User{
@@ -196,7 +197,8 @@ func TestUpdateUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.updateUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -208,7 +210,8 @@ func TestUpdateUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.updateUser(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -218,8 +221,6 @@ func TestUpdateUserHandler(t *testing.T) {
 
 func TestListUsersHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
-
-	handler := srv.listUsers()
 
 	t.Run("success", func(t *testing.T) {
 		mockUserService.EXPECT().ListUsers(gomock.Any(), "1", "10").Return([]*models.User{
@@ -245,7 +246,8 @@ func TestListUsersHandler(t *testing.T) {
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.listUsers(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
@@ -255,7 +257,8 @@ func TestListUsersHandler(t *testing.T) {
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		w := httptest.NewRecorder()
 
-		handler.ServeHTTP(w, req)
+		srv.listUsers(w, req)
+		srv.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})

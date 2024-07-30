@@ -16,218 +16,160 @@ import (
 type ErrorResponse struct {
 	message string
 }
+type CreateUserRequest struct {
+	Email     string `json:"email" validate:"required,email"`
+	FirstName string `json:"first_name" validate:"required"`
+	LastName  string `json:"last_name" validate:"required"`
+	Password  string `json:"password" validate:"required,min=8,password"`
+}
 
-func (srv *server) createUserHandler() http.HandlerFunc {
-	type CreateUserRequest struct {
-		Email     string `json:"email" validate:"required,email"`
-		FirstName string `json:"first_name" validate:"required"`
-		LastName  string `json:"last_name" validate:"required"`
-		Password  string `json:"password" validate:"required,min=8,password"`
-	}
-
+func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		UserId string `json:"user_id"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		createUserRequest := &CreateUserRequest{}
-		err := srv.decode(r, createUserRequest)
-		if err != nil {
-			srv.logger.Error(err)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		// Validate the User struct
-		err = srv.validate.Struct(createUserRequest)
-		if err != nil {
-			// Validation failed, handle the error
-			errors := err.(validator.ValidationErrors)
-			srv.logger.Error(errors)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		hash, err := passwords.HashPassword(createUserRequest.Password)
-		if err != nil {
-			srv.logger.Error(err)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		user := &models.User{
-			Email:     createUserRequest.Email,
-			FirstName: createUserRequest.FirstName,
-			LastName:  createUserRequest.LastName,
-			Password:  hash,
-		}
-
-		userId, err := srv.userService.CreateUser(r.Context(), user)
-		if err != nil {
-			srv.logger.Error(err)
-			appErrors := err.(*apperrors.AppError)
-			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
-			return
-		}
-
-		createUserResponse := &CreateUserResponse{UserId: userId}
-		srv.respond(w, createUserResponse, http.StatusCreated)
+	createUserRequest := &CreateUserRequest{}
+	err := srv.decode(r, createUserRequest)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
 	}
+
+	// Validate the User struct
+	err = srv.validate.Struct(createUserRequest)
+	if err != nil {
+		// Validation failed, handle the error
+		errors := err.(validator.ValidationErrors)
+		srv.logger.Error(errors)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	hash, err := passwords.HashPassword(createUserRequest.Password)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
+	}
+
+	user := &models.User{
+		Email:     createUserRequest.Email,
+		FirstName: createUserRequest.FirstName,
+		LastName:  createUserRequest.LastName,
+		Password:  hash,
+	}
+
+	userId, err := srv.userService.CreateUser(r.Context(), user)
+	if err != nil {
+		srv.logger.Error(err)
+		appErrors := err.(*apperrors.AppError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		return
+	}
+
+	createUserResponse := &CreateUserResponse{UserId: userId}
+	srv.respond(w, createUserResponse, http.StatusCreated)
 }
 
-func (srv *server) deleteUser() http.HandlerFunc {
+func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
-		UserID    uint
-		DeletedAt time.Time
+		UserID    uint      `json:"user_id"`
+		DeletedAt time.Time `json:"deleted_at"`
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		userID := vars["id"]
+	vars := mux.Vars(r)
+	userID := vars["id"]
 
-		user, err := srv.userService.DeleteUser(r.Context(), userID)
-		if err != nil {
-			srv.logger.Error(err)
-			appErrors := err.(*apperrors.AppError)
-			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
-			return
-		}
-		res := &CreateUserResponse{
-			UserID:    user.ID,
-			DeletedAt: user.DeletedAt,
-		}
-		srv.respond(w, res, http.StatusOK)
+	user, err := srv.userService.DeleteUser(r.Context(), userID)
+	if err != nil {
+		srv.logger.Error(err)
+		appErrors := err.(*apperrors.AppError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		return
 	}
+	res := &CreateUserResponse{
+		UserID:    user.ID,
+		DeletedAt: user.DeletedAt,
+	}
+	srv.respond(w, res, http.StatusOK)
 }
 
-func (srv *server) getUser() http.HandlerFunc {
-	type CreateUserResponse struct {
-		UserID    uint
-		Email     string
-		FirstName string
-		LastName  string
+func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
 
-		CreatedAt time.Time
-		UpdatedAt time.Time
+	user, err := srv.userService.GetUser(r.Context(), userID)
+	if err != nil {
+		srv.logger.Error(err)
+		appErrors := err.(*apperrors.AppError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		return
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		userID := vars["id"]
-
-		user, err := srv.userService.GetUser(r.Context(), userID)
-		if err != nil {
-			srv.logger.Error(err)
-			appErrors := err.(*apperrors.AppError)
-			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
-			return
-		}
-
-		res := &CreateUserResponse{
-			UserID:    user.ID,
-			Email:     user.Email,
-			FirstName: user.FirstName,
-			LastName:  user.LastName,
-			CreatedAt: user.CreatedAt,
-			UpdatedAt: user.UpdatedAt,
-		}
-		srv.respond(w, res, http.StatusCreated)
-	}
+	srv.respond(w, user, http.StatusCreated)
 }
 
-func (srv *server) updateUser() http.HandlerFunc {
-	type CreateUserRequest struct {
-		Email     string `json:"email" validate:"required,email"`
-		FirstName string `json:"first_name" validate:"required"`
-		LastName  string `json:"last_name" validate:"required"`
-		Password  string `json:"password" validate:"required,min=8,password"`
+func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+
+	createUserRequest := &CreateUserRequest{}
+	err := srv.decode(r, createUserRequest)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
+	}
+	// Validate the User struct
+	err = srv.validate.Struct(createUserRequest)
+	if err != nil {
+		// Validation failed, handle the error
+		errors := err.(validator.ValidationErrors)
+		srv.logger.Error(errors)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		userID := vars["id"]
-
-		createUserRequest := &CreateUserRequest{}
-		err := srv.decode(r, createUserRequest)
-		if err != nil {
-			srv.logger.Error(err)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-		// Validate the User struct
-		err = srv.validate.Struct(createUserRequest)
-		if err != nil {
-			// Validation failed, handle the error
-			errors := err.(validator.ValidationErrors)
-			srv.logger.Error(errors)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		hash, err := passwords.HashPassword(createUserRequest.Password)
-		if err != nil {
-			srv.logger.Error(err)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		updatedData := &models.User{
-			Email:     createUserRequest.Email,
-			FirstName: createUserRequest.FirstName,
-			LastName:  createUserRequest.LastName,
-			Password:  hash,
-		}
-
-		_, err = srv.userService.UpdateUser(r.Context(), userID, updatedData)
-		if err != nil {
-			srv.logger.Error(err)
-			appErrors := err.(*apperrors.AppError)
-			srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
-			return
-		}
-
-		srv.respond(w, nil, http.StatusCreated)
+	hash, err := passwords.HashPassword(createUserRequest.Password)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
 	}
+
+	updatedData := &models.User{
+		Email:     createUserRequest.Email,
+		FirstName: createUserRequest.FirstName,
+		LastName:  createUserRequest.LastName,
+		Password:  hash,
+	}
+
+	_, err = srv.userService.UpdateUser(r.Context(), userID, updatedData)
+	if err != nil {
+		srv.logger.Error(err)
+		appErrors := err.(*apperrors.AppError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		return
+	}
+
+	srv.respond(w, nil, http.StatusCreated)
 }
 
-func (srv *server) listUsers() http.HandlerFunc {
-	type CreateUserResponse struct {
-		UserID    uint
-		Email     string
-		FirstName string
-		LastName  string
+func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
+	queryParams := r.URL.Query()
 
-		CreatedAt time.Time
-		UpdatedAt time.Time
+	page := queryParams.Get("page")
+	pageSize := queryParams.Get("page_size")
+
+	users, err := srv.userService.ListUsers(r.Context(), page, pageSize)
+	if err != nil {
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		return
 	}
-	return func(w http.ResponseWriter, r *http.Request) {
-		queryParams := r.URL.Query()
 
-		page := queryParams.Get("page")
-		pageSize := queryParams.Get("page_size")
-
-		users, err := srv.userService.ListUsers(r.Context(), page, pageSize)
-		if err != nil {
-			srv.logger.Error(err)
-			srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
-			return
-		}
-
-		// convert models into struct
-		var res []CreateUserResponse
-		for _, item := range users {
-			res = append(res, CreateUserResponse{
-				UserID:    item.ID,
-				Email:     item.Email,
-				FirstName: item.FirstName,
-				LastName:  item.LastName,
-
-				CreatedAt: item.CreatedAt,
-				UpdatedAt: item.UpdatedAt,
-			})
-		}
-		srv.respond(w, res, http.StatusOK)
-	}
+	srv.respond(w, users, http.StatusOK)
 }
 
 func (srv *server) decode(r *http.Request, v interface{}) error {
