@@ -21,10 +21,10 @@ type UserServiceInterface interface {
 	DeleteUser(ctx context.Context, userID string) (*models.User, error)
 	GetUser(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, user *models.User) (*models.User, error)
-	ListUsers(ctx context.Context, page, pageSize string) ([]*models.User, error)
+	ListUsers(ctx context.Context, page, pageSize string) ([]models.User, error)
 }
 
-func NewUserService(userRepo *repositories.UserRepo, logger *zap.SugaredLogger) *UserService {
+func NewUserService(userRepo *repositories.UserRepo, logger *zap.SugaredLogger) UserServiceInterface {
 	return &UserService{
 		userRepo: userRepo,
 		logger:   logger,

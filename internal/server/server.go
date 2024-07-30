@@ -25,7 +25,7 @@ type server struct {
 	logger      *zap.SugaredLogger
 	validate    *validator.Validate
 	cfg         *config.Config
-	userService *services.UserService
+	userService services.UserServiceInterface
 }
 
 func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
