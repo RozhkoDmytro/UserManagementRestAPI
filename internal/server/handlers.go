@@ -103,7 +103,7 @@ func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusNotFound)
 		return
 	}
 
@@ -149,7 +149,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusNotFound)
 		return
 	}
 
