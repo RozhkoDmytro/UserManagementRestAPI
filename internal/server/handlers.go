@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
@@ -14,7 +13,7 @@ import (
 )
 
 type ErrorResponse struct {
-	message string
+	Message string `json:"message"`
 }
 type CreateUserRequest struct {
 	Email     string `json:"email" validate:"required,email"`
@@ -32,24 +31,30 @@ func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	err := srv.decode(r, createUserRequest)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	// Validate the User struct
 	err = srv.validate.Struct(createUserRequest)
 	if err != nil {
-		// Validation failed, handle the error
-		errors := err.(validator.ValidationErrors)
-		srv.logger.Error(errors)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
+
+	/* 	// Check if email is unique
+	   	existingUser, _ := srv.userService.GetUserByEmail(r.Context(), createUserRequest.Email)
+	   	if existingUser != nil {
+	   		http.Error(w, "Email already in use", http.StatusBadRequest)
+	   		return
+	   	} */
 
 	hash, err := passwords.HashPassword(createUserRequest.Password)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 
@@ -64,7 +69,7 @@ func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		srv.respond(w, &ErrorResponse{Message: appErrors.Message}, http.StatusInternalServerError)
 		return
 	}
 
@@ -85,7 +90,7 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusInternalServerError)
+		srv.respond(w, &ErrorResponse{Message: appErrors.Message}, http.StatusInternalServerError)
 		return
 	}
 	res := &CreateUserResponse{
@@ -103,7 +108,7 @@ func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusNotFound)
+		srv.respond(w, &ErrorResponse{Message: appErrors.Message}, http.StatusNotFound)
 		return
 	}
 
@@ -118,23 +123,21 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	err := srv.decode(r, createUserRequest)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 	// Validate the User struct
 	err = srv.validate.Struct(createUserRequest)
 	if err != nil {
-		// Validation failed, handle the error
-		errors := err.(validator.ValidationErrors)
-		srv.logger.Error(errors)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.logger.Error(err)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 
 	hash, err := passwords.HashPassword(createUserRequest.Password)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 
@@ -149,7 +152,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		srv.logger.Error(err)
 		appErrors := err.(*apperrors.AppError)
-		srv.respond(w, &ErrorResponse{message: appErrors.Message}, http.StatusNotFound)
+		srv.respond(w, &ErrorResponse{Message: appErrors.Message}, http.StatusNotFound)
 		return
 	}
 
@@ -165,7 +168,7 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	users, err := srv.userService.ListUsers(r.Context(), page, pageSize)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 
@@ -180,7 +183,7 @@ func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 	count, err := srv.userService.CountUsers(ctx)
 	if err != nil {
 		srv.logger.Error(err)
-		srv.respond(w, &ErrorResponse{message: err.Error()}, http.StatusBadRequest)
+		srv.respond(w, &ErrorResponse{Message: err.Error()}, http.StatusBadRequest)
 		return
 	}
 	res := &CreateUserResponse{
