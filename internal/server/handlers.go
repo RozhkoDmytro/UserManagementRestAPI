@@ -165,13 +165,17 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int) {
 	intPage, err := strconv.Atoi(page)
 	if err != nil {
-		srv.logger.Error(err)
+		if page != "" {
+			srv.logger.Error(err)
+		}
 		intPage = 0
 	}
 
 	intPageSize, err := strconv.Atoi(pageSize)
 	if err != nil {
-		srv.logger.Error(err)
+		if pageSize != "" {
+			srv.logger.Error(err)
+		}
 		intPageSize = 0
 	}
 
