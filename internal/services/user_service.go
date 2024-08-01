@@ -21,7 +21,7 @@ type UserServiceInterface interface {
 	DeleteUser(ctx context.Context, userID string) (*models.User, error)
 	GetUser(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, user *models.User) (*models.User, error)
-	ListUsers(ctx context.Context, page, pageSize string) ([]models.User, error)
+	ListUsers(ctx context.Context, page, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 }
@@ -73,20 +73,8 @@ func (service *UserService) UpdateUser(ctx context.Context, userID string, updat
 	return user, nil
 }
 
-func (service *UserService) ListUsers(ctx context.Context, page, pageSize string) (user []models.User, err error) {
-	intPage, err := strconv.Atoi(page)
-	if err != nil {
-		service.logger.Error(err)
-		return nil, err
-	}
-
-	intPageSize, err := strconv.Atoi(pageSize)
-	if err != nil {
-		service.logger.Error(err)
-		return nil, err
-	}
-
-	user, err = service.userRepo.ListUsers(ctx, intPage, intPageSize)
+func (service *UserService) ListUsers(ctx context.Context, page, pageSize int) (user []models.User, err error) {
+	user, err = service.userRepo.ListUsers(ctx, page, pageSize)
 	if err != nil {
 		service.logger.Error(err)
 		return nil, err

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -143,8 +144,19 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
+	intPage, err := strconv.Atoi(page)
+	if err != nil {
+		srv.logger.Error(err)
+		return
+	}
 
-	users, err := srv.userService.ListUsers(r.Context(), page, pageSize)
+	intPageSize, err := strconv.Atoi(pageSize)
+	if err != nil {
+		srv.logger.Error(err)
+		return
+	}
+
+	users, err := srv.userService.ListUsers(r.Context(), intPage, intPageSize)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
