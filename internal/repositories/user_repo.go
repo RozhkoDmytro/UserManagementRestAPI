@@ -24,6 +24,7 @@ type UserRepoInterface interface {
 	UpdateUser(ctx context.Context, userID string, updatedData *models.User) (*models.User, error)
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -134,4 +135,17 @@ func (repo *UserRepo) CountUsers(ctx context.Context) (int, error) {
 		return 0, apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
 	}
 	return int(count), nil
+}
+
+func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	tx := repo.db.WithContext(ctx).Where("email = ? AND deleted_at = ?", email, time.Time{}).First(&user)
+	if tx.Error != nil {
+		if tx.RowsAffected == 0 {
+			return nil, nil // No user found
+		}
+		repo.logger.Error(tx.Error)
+		return nil, tx.Error
+	}
+	return &user, nil
 }
