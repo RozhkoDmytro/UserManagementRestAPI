@@ -14,6 +14,13 @@ import (
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 )
 
+const (
+	defaultPage     = 1
+	defaultPageSize = 10
+	maxPage         = 1000
+	maxPageSize     = 1000
+)
+
 type ErrorResponse struct {
 	Message string `json:"message"`
 }
@@ -144,18 +151,8 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
-	intPage, err := strconv.Atoi(page)
-	if err != nil {
-		srv.logger.Error(err)
-		return
-	}
 
-	intPageSize, err := strconv.Atoi(pageSize)
-	if err != nil {
-		srv.logger.Error(err)
-		return
-	}
-
+	intPage, intPageSize := srv.validateListUsersParam(page, pageSize)
 	users, err := srv.userService.ListUsers(r.Context(), intPage, intPageSize)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
@@ -163,6 +160,36 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srv.respond(w, users, http.StatusOK)
+}
+
+func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int) {
+	intPage, err := strconv.Atoi(page)
+	if err != nil {
+		srv.logger.Error(err)
+		intPage = 0
+	}
+
+	intPageSize, err := strconv.Atoi(pageSize)
+	if err != nil {
+		srv.logger.Error(err)
+		intPageSize = 0
+	}
+
+	if intPage < defaultPage {
+		validPage = defaultPage
+	}
+
+	if intPageSize < defaultPageSize {
+		validPageSize = defaultPageSize
+	}
+
+	if intPage > maxPage {
+		validPage = maxPage
+	}
+	if intPageSize > maxPageSize {
+		validPageSize = maxPageSize
+	}
+	return
 }
 
 func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
