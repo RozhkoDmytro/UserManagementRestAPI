@@ -17,7 +17,6 @@ import (
 const (
 	defaultPage     = 1
 	defaultPageSize = 10
-	maxPage         = 1000
 	maxPageSize     = 1000
 )
 
@@ -152,7 +151,11 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
 
-	intPage, intPageSize := srv.validateListUsersParam(page, pageSize)
+	intPage, intPageSize, err := srv.validateListUsersParam(page, pageSize)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
 	users, err := srv.userService.ListUsers(r.Context(), intPage, intPageSize)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
@@ -162,13 +165,13 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, users, http.StatusOK)
 }
 
-func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int) {
+func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
 	intPage, err := strconv.Atoi(page)
 	if err != nil {
 		if page != "" {
 			srv.logger.Error(err)
 		}
-		intPage = 0
+		validPage = defaultPage
 	}
 
 	intPageSize, err := strconv.Atoi(pageSize)
@@ -176,24 +179,17 @@ func (srv *server) validateListUsersParam(page, pageSize string) (validPage, val
 		if pageSize != "" {
 			srv.logger.Error(err)
 		}
-		intPageSize = 0
-	}
-
-	if intPage < defaultPage {
-		validPage = defaultPage
-	}
-
-	if intPageSize < defaultPageSize {
 		validPageSize = defaultPageSize
 	}
 
-	if intPage > maxPage {
-		validPage = maxPage
+	if intPage < defaultPage {
+		return validPage, validPageSize, errors.New("incorret page number")
 	}
-	if intPageSize > maxPageSize {
-		validPageSize = maxPageSize
+
+	if intPageSize > maxPageSize || intPageSize <= 0 {
+		return validPage, validPageSize, errors.New("the number of objects on the page should be in the range from 1 to " + strconv.Itoa(maxPageSize))
 	}
-	return
+	return validPage, validPageSize, nil
 }
 
 func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
