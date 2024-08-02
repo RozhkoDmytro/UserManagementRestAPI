@@ -5,9 +5,9 @@ import (
 	"strconv"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/constants"
+	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
-	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"go.uber.org/zap"
 )
 
