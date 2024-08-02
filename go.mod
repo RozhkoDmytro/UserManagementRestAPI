@@ -8,6 +8,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/joho/godotenv v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.13.0
 	golang.org/x/crypto v0.19.0
