@@ -8,7 +8,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-var jwtKey = []byte(os.Getenv("JWT_KEY"))
+var JwtKey = []byte(os.Getenv("JWT_KEY"))
 
 type Claims struct {
 	Username string `json:"username"`
@@ -26,7 +26,7 @@ func GenerateTokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(JwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
