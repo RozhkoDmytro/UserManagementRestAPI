@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
@@ -39,6 +40,7 @@ func (srv *server) initializeRoutes() {
 	srv.router.Update("/users/{id}", srv.basicAuth(srv.updateUser))
 	srv.router.Get("/users", srv.contextExpire(srv.listUsers))
 	srv.router.Get("/users/count", srv.contextExpire(srv.countUsers))
+	srv.router.Post("/login", srv.contextExpire(auth.GenerateTokenHandler))
 }
 
 func Run() {
