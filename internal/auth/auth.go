@@ -27,7 +27,6 @@ func GenerateTokenHandler(username, role string, JwtKey []byte) []byte {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(JwtKey)
 	if err != nil {
-		// http.Error(w, err.Error(), http.StatusInternalServerError)
 		return nil
 	}
 
@@ -37,11 +36,11 @@ func GenerateTokenHandler(username, role string, JwtKey []byte) []byte {
 func Access(username, password string, user *models.User) error {
 	// Check the password
 	if user == nil {
-		return errors.New("Username is not fount in DB")
+		return errors.New("username is not fount in DB")
 	}
 
 	if !passwords.CheckPasswordHash(password, user.Password) {
-		return errors.New("Invalid username or password")
+		return errors.New("invalid username or password")
 	}
 
 	return nil

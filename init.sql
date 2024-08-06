@@ -24,3 +24,13 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Set default role for existing users
 UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'user') WHERE role_id IS NULL;
+
+-- Insert a user with the 'admin' role
+INSERT INTO users (email, first_name, last_name, password, role_id)
+VALUES (
+    'admin@example.com',
+    'Admin',
+    'Super',
+    '$2a$14$4Cxw5/NK2ARnNMcE8/jnSuo6vATld5cO1yxSuWXwniqgIJIa39I7a',  -- It's best to hash passwords before inserting them in a real application
+    (SELECT id FROM roles WHERE name = 'admin')
+);

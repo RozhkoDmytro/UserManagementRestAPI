@@ -50,7 +50,7 @@ func (repo *UserRepo) GetUser(ctx context.Context, userID string) (*models.User,
 	var user models.User
 
 	// Fetch the user to be updated
-	result := tx.First(&user, "id = ? AND deleted_at = ?", userID, time.Time{})
+	result := tx.First(&user, "id = ? AND (deleted_at IS NULL OR deleted_at = ?)", userID, time.Time{})
 	if result.Error != nil {
 		if result.RowsAffected == 0 {
 			repo.logger.Warn("No user found with the given ID.")
@@ -72,7 +72,7 @@ func (repo *UserRepo) UpdateUser(ctx context.Context, userID string, updatedData
 	var user models.User
 
 	// Fetch the user to be updated
-	result := tx.First(&user, "id = ? AND deleted_at = ?", userID, time.Time{})
+	result := tx.First(&user, "id = ? AND (deleted_at IS NULL OR deleted_at = ?)", userID, time.Time{})
 	if result.Error != nil {
 		if result.RowsAffected == 0 {
 			repo.logger.Warn("No user found with the given ID.")
@@ -117,7 +117,7 @@ func (repo *UserRepo) ListUsers(ctx context.Context, page int, pageSize int) ([]
 	// Calculate offset for pagination
 	offset := (page - 1) * pageSize
 
-	result := tx.Limit(pageSize).Offset(offset).Find(&users, "deleted_at = ?", time.Time{})
+	result := tx.Limit(pageSize).Offset(offset).Find(&users, "deleted_at IS NULL OR deleted_at = ?", time.Time{})
 	if result.Error != nil {
 		repo.logger.Error(result.Error)
 		return nil, apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
@@ -129,7 +129,7 @@ func (repo *UserRepo) ListUsers(ctx context.Context, page int, pageSize int) ([]
 func (repo *UserRepo) CountUsers(ctx context.Context) (int, error) {
 	var count int64
 	tx := repo.db.WithContext(ctx)
-	result := tx.Model(&models.User{}).Where("deleted_at = ?", time.Time{}).Count(&count)
+	result := tx.Model(&models.User{}).Where("deleted_at IS NULL OR deleted_at = ?", time.Time{}).Count(&count)
 	if result.Error != nil {
 		repo.logger.Error(result.Error)
 		return 0, apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
@@ -139,7 +139,7 @@ func (repo *UserRepo) CountUsers(ctx context.Context) (int, error) {
 
 func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	tx := repo.db.WithContext(ctx).Where("email = ? AND deleted_at = ?", email, time.Time{}).First(&user)
+	tx := repo.db.WithContext(ctx).Where("email = ? AND (deleted_at IS NULL OR deleted_at = ?)", email, time.Time{}).First(&user)
 	if tx.Error != nil {
 		if tx.RowsAffected == 0 {
 			return nil, nil // No user found

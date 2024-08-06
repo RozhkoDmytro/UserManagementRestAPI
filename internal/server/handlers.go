@@ -61,6 +61,7 @@ func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		FirstName: createUserRequest.FirstName,
 		LastName:  createUserRequest.LastName,
 		Password:  hash,
+		RoleID:    1, // bad approach
 	}
 
 	userId, err := srv.userService.CreateUser(r.Context(), user)
