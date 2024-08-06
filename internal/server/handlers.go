@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
@@ -206,6 +207,25 @@ func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 		Count: uint(count),
 	}
 	srv.respond(w, res, http.StatusOK)
+}
+
+func (srv *server) login(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	user, err := srv.userService.GetUserByEmail(r.Context(), email)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	err = auth.Access(email, password, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, []byte(srv.cfg.JwtKey)))
 }
 
 func (srv *server) decode(r *http.Request, v interface{}) error {

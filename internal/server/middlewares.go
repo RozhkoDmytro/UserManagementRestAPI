@@ -7,8 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
+	"github.com/dgrijalva/jwt-go"
+	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 )
+
+// Define a custom type for the context key
+type contextKey string
+
+const RoleContextKey contextKey = "role"
 
 func (srv *server) basicAuth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -39,24 +45,15 @@ func (srv *server) basicAuth(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		username := userPass[0]
-		password := userPass[1]
-
-		user, err := srv.userService.GetUserByEmail(ctx, username)
+		user, err := srv.userService.GetUserByEmail(ctx, userPass[0])
 		if err != nil {
 			srv.sendError(w, err, http.StatusBadRequest)
 			return
-
 		}
 
-		// Check the password
-		if user == nil {
-			http.Error(w, "Username is not fount in DB", http.StatusUnauthorized)
-			return
-		}
-
-		if !passwords.CheckPasswordHash(password, user.Password) {
-			http.Error(w, "Invalid username or password", http.StatusUnauthorized)
+		err = auth.Access(userPass[0], userPass[1], user)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -71,6 +68,31 @@ func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
 		defer cancel()
 
 		r = r.WithContext(ctx) // Use the returned request with the new context
+		h(w, r)
+	}
+}
+
+func (srv *server) JWTMiddleware(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tokenStr := r.Header.Get("Authorization")
+		if tokenStr == "" {
+			http.Error(w, "Missing token", http.StatusUnauthorized)
+			return
+		}
+
+		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
+
+		claims := &auth.Claims{}
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			return srv.cfg.JwtKey, nil
+		})
+		if err != nil || !token.Valid {
+			http.Error(w, "Invalid token", http.StatusUnauthorized)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)
+		r = r.WithContext(ctx)
 		h(w, r)
 	}
 }
