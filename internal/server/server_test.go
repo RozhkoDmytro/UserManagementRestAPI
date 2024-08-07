@@ -74,9 +74,9 @@ func TestCreateUserHandler(t *testing.T) {
 	mockUserService, srv := InitializeMock(t)
 
 	t.Run("success", func(t *testing.T) {
-		mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("1", nil)
+		mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("2", nil)
 
-		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwoSrd123!"}`
+		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwoSrd123!", "role_id":3}`
 		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
 		w := httptest.NewRecorder()
@@ -191,10 +191,10 @@ func TestUpdateUserHandler(t *testing.T) {
 			UpdatedAt: time.Now(),
 		}, nil)
 
-		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwor!!Gd123"}`
-		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
+		reqBody := `{"email":"test@example.com","first_name":"John","last_name":"Doe","password":"passwor!!Gd123", "role_id":2}`
+		req := httptest.NewRequest(http.MethodPut, "/users/5", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", encodeBasicAuth(srv.cfg.Baseauth.Username, srv.cfg.Baseauth.Password))
-		req = mux.SetURLVars(req, map[string]string{"id": "8"})
+		req = mux.SetURLVars(req, map[string]string{"id": "5"})
 		w := httptest.NewRecorder()
 
 		srv.updateUser(w, req)
