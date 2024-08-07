@@ -150,6 +150,17 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 
+	ctx := r.Context()
+	_, role, err := emailRoleFromContext(ctx)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
+
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
 
