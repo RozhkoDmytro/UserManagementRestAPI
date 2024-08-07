@@ -98,6 +98,9 @@ func (repo *UserRepo) UpdateUser(ctx context.Context, userID string, updatedData
 	if !updatedData.DeletedAt.IsZero() {
 		user.DeletedAt = updatedData.DeletedAt
 	}
+	if updatedData.RoleID > 0 {
+		user.RoleID = updatedData.RoleID
+	}
 	// Add other fields to update as needed
 
 	// Save the changes

@@ -29,6 +29,7 @@ type CreateUserRequest struct {
 	FirstName string `json:"first_name" validate:"required"`
 	LastName  string `json:"last_name" validate:"required"`
 	Password  string `json:"password" validate:"required,min=8,password"`
+	RoleID    uint   `json:"role_id" validate:"required,oneof=1 2 3"`
 }
 
 func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -111,9 +112,15 @@ func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
+	ctx := r.Context()
+	_, role, err := emailRoleFromContext(ctx)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
 
 	createUserRequest := &CreateUserRequest{}
-	err := srv.decode(r, createUserRequest)
+	err = srv.decode(r, createUserRequest)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -138,7 +145,11 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 		Password:  hash,
 	}
 
-	_, err = srv.userService.UpdateUser(r.Context(), userID, updatedData)
+	if (role == models.StrAdmin || role == models.StrModerator) && (createUserRequest.RoleID > 0) {
+		updatedData.RoleID = createUserRequest.RoleID
+	}
+
+	_, err = srv.userService.UpdateUser(ctx, userID, updatedData)
 	if err != nil {
 		srv.sendError(w, err, http.StatusNotFound)
 		return
@@ -149,7 +160,6 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 
 func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
-
 	ctx := r.Context()
 	_, role, err := emailRoleFromContext(ctx)
 	if err != nil {
@@ -169,7 +179,7 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-	users, err := srv.userService.ListUsers(r.Context(), intPage, intPageSize)
+	users, err := srv.userService.ListUsers(ctx, intPage, intPageSize)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
