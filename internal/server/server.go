@@ -33,7 +33,7 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) initializeRoutes() {
-	srv.router.Post("/users", srv.jwtMiddleware(srv.createUserHandler))
+	srv.router.Post("/users", srv.contextExpire(srv.createUserHandler))
 	srv.router.Get("/users/{id:[0-9]+}", srv.jwtMiddleware(srv.getUser))
 	srv.router.Delete("/users/{id}", srv.jwtMiddleware(srv.deleteUser))
 	srv.router.Update("/users/{id}", srv.jwtMiddleware(srv.updateUser))

@@ -84,6 +84,17 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
+	ctx := r.Context()
+	_, role, err := emailRoleFromContext(ctx)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
+
 	user, err := srv.userService.DeleteUser(r.Context(), userID)
 	if err != nil {
 		srv.sendError(w, err, http.StatusInternalServerError)
@@ -99,8 +110,18 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
+	ctx := r.Context()
+	_, role, err := emailRoleFromContext(ctx)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
 
-	user, err := srv.userService.GetUser(r.Context(), userID)
+	user, err := srv.userService.GetUser(ctx, userID)
 	if err != nil {
 		srv.sendError(w, err, http.StatusNotFound)
 		return
