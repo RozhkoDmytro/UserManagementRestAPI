@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -330,4 +331,26 @@ func TestDeleteUserHandler(t *testing.T) {
 	})
 
 	// Add more test cases as needed
+}
+
+func TestLogin(t *testing.T) {
+	_, srv := InitializeMock(t)
+
+	t.Run("success", func(t *testing.T) {
+		newEmail := "admin@example.com" // Use a fixed email for predictability
+
+		// Encode the form values
+		form := url.Values{}
+		form.Add("email", newEmail)
+		form.Add("password", "securePassword7!")
+		reqBody := form.Encode()
+
+		req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(reqBody))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+
+		srv.login(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
 }

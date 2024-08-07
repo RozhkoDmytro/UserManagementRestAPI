@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -244,6 +245,9 @@ func (srv *server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println(email)
+	fmt.Println(password)
+	fmt.Println(user)
 	err = auth.Access(email, password, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
