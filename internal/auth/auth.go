@@ -10,15 +10,15 @@ import (
 )
 
 type Claims struct {
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	Email string `json:"email"`
+	Role  string `json:"role"`
 	jwt.StandardClaims
 }
 
-func GenerateTokenHandler(username, role string, JwtKey []byte) []byte {
+func GenerateTokenHandler(email, role string, JwtKey []byte) []byte {
 	claims := &Claims{
-		Username: username,
-		Role:     role,
+		Email: email,
+		Role:  role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
 		},

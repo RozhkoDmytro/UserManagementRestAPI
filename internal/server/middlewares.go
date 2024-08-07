@@ -14,7 +14,10 @@ import (
 // Define a custom type for the context key
 type contextKey string
 
-const RoleContextKey contextKey = "role"
+const (
+	RoleContextKey  contextKey = "role"
+	EmailContextKey contextKey = "email"
+)
 
 func (srv *server) basicAuth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +75,7 @@ func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (srv *server) JWTMiddleware(h http.HandlerFunc) http.HandlerFunc {
+func (srv *server) jwtMiddleware(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tokenStr := r.Header.Get("Authorization")
 		if tokenStr == "" {
@@ -84,7 +87,7 @@ func (srv *server) JWTMiddleware(h http.HandlerFunc) http.HandlerFunc {
 
 		claims := &auth.Claims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return srv.cfg.JwtKey, nil
+			return []byte(srv.cfg.JwtKey), nil
 		})
 		if err != nil || !token.Valid {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
@@ -92,6 +95,7 @@ func (srv *server) JWTMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		}
 
 		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)
+		ctx = context.WithValue(ctx, EmailContextKey, claims.Email)
 		r = r.WithContext(ctx)
 		h(w, r)
 	}

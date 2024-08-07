@@ -19,3 +19,9 @@ type User struct {
 	UpdatedAt time.Time `json:"updated_at"`
 	DeletedAt time.Time `json:"-" gorm:"index"`
 }
+
+const (
+	StrAdmin     = "admin"
+	StrModerator = "moderator"
+	StrUser      = "user"
+)

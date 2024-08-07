@@ -167,38 +167,20 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, users, http.StatusOK)
 }
 
-func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
-	validPage, err = strconv.Atoi(page)
-	if err != nil {
-		if page != "" {
-			srv.logger.Error(err)
-		}
-		validPage = defaultPage
-	}
-
-	validPageSize, err = strconv.Atoi(pageSize)
-	if err != nil {
-		if pageSize != "" {
-			srv.logger.Error(err)
-		}
-		validPageSize = defaultPageSize
-	}
-
-	if validPage < defaultPage {
-		return validPage, validPageSize, errors.New("incorrect page number")
-	}
-
-	if validPageSize > maxPageSize || validPageSize <= 0 {
-		return validPage, validPageSize, errors.New("the number of objects on the page should be in the range from 1 to " + strconv.Itoa(maxPageSize))
-	}
-	return validPage, validPageSize, nil
-}
-
 func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
+	_, role, err := emailRoleFromContext(ctx)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
 	count, err := srv.userService.CountUsers(ctx)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
@@ -225,8 +207,34 @@ func (srv *server) login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-
 	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, []byte(srv.cfg.JwtKey)))
+}
+
+func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
+	validPage, err = strconv.Atoi(page)
+	if err != nil {
+		if page != "" {
+			srv.logger.Error(err)
+		}
+		validPage = defaultPage
+	}
+
+	validPageSize, err = strconv.Atoi(pageSize)
+	if err != nil {
+		if pageSize != "" {
+			srv.logger.Error(err)
+		}
+		validPageSize = defaultPageSize
+	}
+
+	if validPage < defaultPage {
+		return validPage, validPageSize, errors.New("incorrect page number")
+	}
+
+	if validPageSize > maxPageSize || validPageSize <= 0 {
+		return validPage, validPageSize, errors.New("the number of objects on the page should be in the range from 1 to " + strconv.Itoa(maxPageSize))
+	}
+	return validPage, validPageSize, nil
 }
 
 func (srv *server) decode(r *http.Request, v interface{}) error {
@@ -264,4 +272,18 @@ func (srv *server) ValidateUserStruct(ctx context.Context, createUserRequest *Cr
 func (srv *server) sendError(w http.ResponseWriter, err error, httpStatus int) {
 	srv.logger.Error(err)
 	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
+}
+
+func emailRoleFromContext(ctx context.Context) (string, string, error) {
+	email, ok := ctx.Value(EmailContextKey).(string)
+	if !ok {
+		return "", "", errors.New("user not found in context")
+	}
+
+	role, ok := ctx.Value(RoleContextKey).(string)
+	if !ok {
+		return "", "", errors.New("role not found in context")
+	}
+
+	return email, role, nil
 }

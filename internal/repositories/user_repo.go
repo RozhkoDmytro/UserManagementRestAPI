@@ -139,7 +139,10 @@ func (repo *UserRepo) CountUsers(ctx context.Context) (int, error) {
 
 func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	tx := repo.db.WithContext(ctx).Where("email = ? AND (deleted_at IS NULL OR deleted_at = ?)", email, time.Time{}).First(&user)
+	tx := repo.db.WithContext(ctx).
+		Where("email = ? AND (deleted_at IS NULL OR deleted_at = ?)", email, time.Time{}).
+		Preload("Role").
+		First(&user)
 	if tx.Error != nil {
 		if tx.RowsAffected == 0 {
 			return nil, nil // No user found
