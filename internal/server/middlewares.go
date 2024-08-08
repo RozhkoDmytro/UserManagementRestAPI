@@ -47,6 +47,11 @@ func (srv *server) jwtMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
+		if claims.Role == "" || claims.Email == "" {
+			http.Error(w, "token haven't info about Role,Email", http.StatusUnauthorized)
+			return
+		}
+
 		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)
 		ctx = context.WithValue(ctx, EmailContextKey, claims.Email)
 		r = r.WithContext(ctx)
