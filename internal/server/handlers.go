@@ -86,7 +86,7 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	userID := vars["id"]
 
 	ctx := r.Context()
-	_, role, err := emailRoleFromContext(ctx)
+	role, err := roleFromContext(ctx)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -126,7 +126,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
-	_, role, err := emailRoleFromContext(ctx)
+	role, err := roleFromContext(ctx)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -293,16 +293,11 @@ func (srv *server) sendError(w http.ResponseWriter, err error, httpStatus int) {
 	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
 }
 
-func emailRoleFromContext(ctx context.Context) (string, string, error) {
-	email, ok := ctx.Value(EmailContextKey).(string)
-	if !ok {
-		return "", "", errors.New("user not found in context")
-	}
-
+func roleFromContext(ctx context.Context) (string, error) {
 	role, ok := ctx.Value(RoleContextKey).(string)
 	if !ok {
-		return "", "", errors.New("role not found in context")
+		return "", errors.New("role not found in context")
 	}
 
-	return email, role, nil
+	return role, nil
 }
