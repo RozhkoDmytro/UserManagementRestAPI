@@ -112,15 +112,6 @@ func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
-	_, role, err := emailRoleFromContext(ctx)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-	if role != models.StrAdmin && role != models.StrModerator {
-		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
-		return
-	}
 
 	user, err := srv.userService.GetUser(ctx, userID)
 	if err != nil {
@@ -183,15 +174,6 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	ctx := r.Context()
-	_, role, err := emailRoleFromContext(ctx)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-	if role != models.StrAdmin && role != models.StrModerator {
-		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
-		return
-	}
 
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
@@ -215,15 +197,6 @@ func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
-	_, role, err := emailRoleFromContext(ctx)
-	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-	if role != models.StrAdmin && role != models.StrModerator {
-		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
-		return
-	}
 	count, err := srv.userService.CountUsers(ctx)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
