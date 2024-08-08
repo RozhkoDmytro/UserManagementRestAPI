@@ -120,7 +120,7 @@ func (repo *UserRepo) ListUsers(ctx context.Context, page int, pageSize int) ([]
 	// Calculate offset for pagination
 	offset := (page - 1) * pageSize
 
-	result := tx.Limit(pageSize).Offset(offset).Find(&users, "deleted_at IS NULL OR deleted_at = ?", time.Time{})
+	result := tx.Limit(pageSize).Offset(offset).Preload("Role").Find(&users, "deleted_at IS NULL OR deleted_at = ?", time.Time{})
 	if result.Error != nil {
 		repo.logger.Error(result.Error)
 		return nil, apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
