@@ -3,11 +3,14 @@ package server
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
+	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 )
 
 // Define a custom type for the context key
@@ -50,6 +53,11 @@ func (srv *server) jwtMiddleware(h http.HandlerFunc) http.HandlerFunc {
 		if claims.Role == "" || claims.Email == "" {
 			http.Error(w, "token haven't info about Role,Email", http.StatusUnauthorized)
 			return
+		}
+		vars := mux.Vars(r)
+		userID := vars["id"]
+		if claims.Role == models.StrUser && userID == strconv.FormatUint(uint64(claims.ID), 10) {
+			claims.Role = models.StrModerator // only for yourself account
 		}
 
 		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)

@@ -94,7 +94,7 @@ func TestCreateUserHandler(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		t.Run("success", func(t *testing.T) {
 			newEmail = GenerateEmail()
-			token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+			token := auth.GenerateTokenHandler(newEmail, "admin", 2, []byte(srv.cfg.JwtKey))
 			mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("2", nil)
 
 			reqBody := `{"email":"` + GenerateEmail() + `","first_name":"John","last_name":"Doe","password":"passwoSrd123!", "role_id":3}`
@@ -109,7 +109,7 @@ func TestCreateUserHandler(t *testing.T) {
 		})
 	}
 	t.Run("invalid request", func(t *testing.T) {
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 2, []byte(srv.cfg.JwtKey))
 
 		reqBody := `{"email":"` + GenerateEmail() + `","first_name":"John","last_name":"Doe","password":"passwo", "role_id":3}`
 		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
@@ -132,7 +132,7 @@ func TestGetUserHandler(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 7, []byte(srv.cfg.JwtKey))
 		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.User{
 			ID:        7,
 			Email:     newEmail,
@@ -158,7 +158,7 @@ func TestGetUserHandler(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 999, []byte(srv.cfg.JwtKey))
 		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
 
 		req := httptest.NewRequest(http.MethodGet, "/users/999", nil)
@@ -183,7 +183,7 @@ func TestUpdateUserHandler(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 7, []byte(srv.cfg.JwtKey))
 
 		mockUserService.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(&models.User{
 			ID:        7,
@@ -212,7 +212,7 @@ func TestUpdateUserHandler(t *testing.T) {
 
 	t.Run("invalid request", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 8, []byte(srv.cfg.JwtKey))
 
 		reqBody := `{"email":"` + GenerateEmail() + `"}`
 		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
@@ -234,7 +234,7 @@ func TestListUsersHandler(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 1, []byte(srv.cfg.JwtKey))
 
 		mockUserService.EXPECT().ListUsers(gomock.Any(), "1", "10").Return([]*models.User{
 			{
@@ -270,7 +270,7 @@ func TestListUsersHandler(t *testing.T) {
 
 	t.Run("invalid request, but return ok!", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 1, []byte(srv.cfg.JwtKey))
 
 		req := httptest.NewRequest(http.MethodGet, "/users?page=bad&page_size=10", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
@@ -313,7 +313,7 @@ func TestDeleteUserHandler(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+		token := auth.GenerateTokenHandler(newEmail, "admin", 999, []byte(srv.cfg.JwtKey))
 		mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
 
 		req := httptest.NewRequest(http.MethodDelete, "/users/999", nil)

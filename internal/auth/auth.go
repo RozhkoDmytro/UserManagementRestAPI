@@ -12,13 +12,15 @@ import (
 type Claims struct {
 	Email string `json:"email"`
 	Role  string `json:"role"`
+	ID    uint   `json:"user_id"`
 	jwt.StandardClaims
 }
 
-func GenerateTokenHandler(email, role string, JwtKey []byte) []byte {
+func GenerateTokenHandler(email, role string, ID uint, JwtKey []byte) []byte {
 	claims := &Claims{
 		Email: email,
 		Role:  role,
+		ID:    ID,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
 		},

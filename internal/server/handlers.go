@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -105,25 +104,16 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, res, http.StatusOK)
 }
 
-func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["id"]
-	ctx := r.Context()
-
-	user, err := srv.userService.GetUser(ctx, userID)
-	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
-		return
-	}
-
-	srv.respond(w, user, http.StatusCreated)
-}
-
 func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
 	role := roleFromContext(ctx)
+
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
 
 	createUserRequest := &CreateUserRequest{}
 	err := srv.decode(r, createUserRequest)
@@ -151,7 +141,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 		Password:  hash,
 	}
 
-	if (role == models.StrAdmin || role == models.StrModerator) && (createUserRequest.RoleID > 0) {
+	if role == models.StrAdmin && createUserRequest.RoleID > 0 {
 		updatedData.RoleID = createUserRequest.RoleID
 	}
 
@@ -162,6 +152,20 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	srv.respond(w, nil, http.StatusCreated)
+}
+
+func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+	ctx := r.Context()
+
+	user, err := srv.userService.GetUser(ctx, userID)
+	if err != nil {
+		srv.sendError(w, err, http.StatusNotFound)
+		return
+	}
+
+	srv.respond(w, user, http.StatusCreated)
 }
 
 func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
@@ -211,15 +215,12 @@ func (srv *server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Println(email)
-	fmt.Println(password)
-	fmt.Println(user)
 	err = auth.Access(email, password, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, []byte(srv.cfg.JwtKey)))
+	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(srv.cfg.JwtKey)))
 }
 
 func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
