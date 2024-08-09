@@ -10,21 +10,9 @@ import (
 )
 
 type Config struct {
-	AppPort  string `required:"true" split_words:"true"`
-	Postgres *PostgresConfig
-	Baseauth *BaseauthConfig
-}
-
-type PostgresConfig struct {
-	Host     string
-	Username string
-	Password string
-	Dbname   string
-	Timezone string
-}
-type BaseauthConfig struct {
-	Username string
-	Password string
+	AppPort     string `required:"true" split_words:"true"`
+	PostgresURI string `required:"true" split_words:"true"`
+	JwtKey      string `required:"true" split_words:"true"`
 }
 
 func NewConfig() (*Config, error) {

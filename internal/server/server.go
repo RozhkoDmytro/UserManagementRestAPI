@@ -35,10 +35,11 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (srv *server) initializeRoutes() {
 	srv.router.Post("/users", srv.contextExpire(srv.createUserHandler))
 	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(srv.getUser))
-	srv.router.Delete("/users/{id}", srv.basicAuth(srv.deleteUser))
-	srv.router.Update("/users/{id}", srv.basicAuth(srv.updateUser))
+	srv.router.Delete("/users/{id}", srv.jwtMiddleware(srv.deleteUser))
+	srv.router.Update("/users/{id}", srv.jwtMiddleware(srv.updateUser))
 	srv.router.Get("/users", srv.contextExpire(srv.listUsers))
 	srv.router.Get("/users/count", srv.contextExpire(srv.countUsers))
+	srv.router.Post("/login", srv.contextExpire(srv.login))
 }
 
 func Run() {

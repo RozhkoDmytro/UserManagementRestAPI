@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
@@ -17,7 +18,6 @@ import (
 const (
 	defaultPage     = 1
 	defaultPageSize = 10
-	maxPage         = 1000
 	maxPageSize     = 1000
 )
 
@@ -29,6 +29,7 @@ type CreateUserRequest struct {
 	FirstName string `json:"first_name" validate:"required"`
 	LastName  string `json:"last_name" validate:"required"`
 	Password  string `json:"password" validate:"required,min=8,password"`
+	RoleID    uint   `json:"role_id" validate:"required,oneof=1 2 3"`
 }
 
 func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +62,7 @@ func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		FirstName: createUserRequest.FirstName,
 		LastName:  createUserRequest.LastName,
 		Password:  hash,
+		RoleID:    1, // bad approach
 	}
 
 	userId, err := srv.userService.CreateUser(r.Context(), user)
@@ -82,6 +84,14 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 
+	ctx := r.Context()
+	role := roleFromContext(ctx)
+
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
+
 	user, err := srv.userService.DeleteUser(r.Context(), userID)
 	if err != nil {
 		srv.sendError(w, err, http.StatusInternalServerError)
@@ -94,22 +104,16 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, res, http.StatusOK)
 }
 
-func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID := vars["id"]
-
-	user, err := srv.userService.GetUser(r.Context(), userID)
-	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
-		return
-	}
-
-	srv.respond(w, user, http.StatusCreated)
-}
-
 func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
+	ctx := r.Context()
+	role := roleFromContext(ctx)
+
+	if role != models.StrAdmin && role != models.StrModerator {
+		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		return
+	}
 
 	createUserRequest := &CreateUserRequest{}
 	err := srv.decode(r, createUserRequest)
@@ -137,7 +141,11 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 		Password:  hash,
 	}
 
-	_, err = srv.userService.UpdateUser(r.Context(), userID, updatedData)
+	if role == models.StrAdmin && createUserRequest.RoleID > 0 {
+		updatedData.RoleID = createUserRequest.RoleID
+	}
+
+	_, err = srv.userService.UpdateUser(ctx, userID, updatedData)
 	if err != nil {
 		srv.sendError(w, err, http.StatusNotFound)
 		return
@@ -146,54 +154,39 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, nil, http.StatusCreated)
 }
 
+func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID := vars["id"]
+	ctx := r.Context()
+
+	user, err := srv.userService.GetUser(ctx, userID)
+	if err != nil {
+		srv.sendError(w, err, http.StatusNotFound)
+		return
+	}
+
+	srv.respond(w, user, http.StatusCreated)
+}
+
 func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
+	ctx := r.Context()
 
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
 
-	intPage, intPageSize := srv.validateListUsersParam(page, pageSize)
-	users, err := srv.userService.ListUsers(r.Context(), intPage, intPageSize)
+	intPage, intPageSize, err := srv.validateListUsersParam(page, pageSize)
+	if err != nil {
+		srv.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+	users, err := srv.userService.ListUsers(ctx, intPage, intPageSize)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	srv.respond(w, users, http.StatusOK)
-}
-
-func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int) {
-	intPage, err := strconv.Atoi(page)
-	if err != nil {
-		if page != "" {
-			srv.logger.Error(err)
-		}
-		intPage = 0
-	}
-
-	intPageSize, err := strconv.Atoi(pageSize)
-	if err != nil {
-		if pageSize != "" {
-			srv.logger.Error(err)
-		}
-		intPageSize = 0
-	}
-
-	if intPage < defaultPage {
-		validPage = defaultPage
-	}
-
-	if intPageSize < defaultPageSize {
-		validPageSize = defaultPageSize
-	}
-
-	if intPage > maxPage {
-		validPage = maxPage
-	}
-	if intPageSize > maxPageSize {
-		validPageSize = maxPageSize
-	}
-	return
 }
 
 func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
@@ -210,6 +203,51 @@ func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 		Count: uint(count),
 	}
 	srv.respond(w, res, http.StatusOK)
+}
+
+func (srv *server) login(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("email")
+	password := r.FormValue("password")
+
+	user, err := srv.userService.GetUserByEmail(r.Context(), email)
+	if err != nil {
+		srv.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	err = auth.Access(email, password, user)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(srv.cfg.JwtKey)))
+}
+
+func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
+	validPage, err = strconv.Atoi(page)
+	if err != nil {
+		if page != "" {
+			srv.logger.Error(err)
+		}
+		validPage = defaultPage
+	}
+
+	validPageSize, err = strconv.Atoi(pageSize)
+	if err != nil {
+		if pageSize != "" {
+			srv.logger.Error(err)
+		}
+		validPageSize = defaultPageSize
+	}
+
+	if validPage < defaultPage {
+		return validPage, validPageSize, errors.New("incorrect page number")
+	}
+
+	if validPageSize > maxPageSize || validPageSize <= 0 {
+		return validPage, validPageSize, errors.New("the number of objects on the page should be in the range from 1 to " + strconv.Itoa(maxPageSize))
+	}
+	return validPage, validPageSize, nil
 }
 
 func (srv *server) decode(r *http.Request, v interface{}) error {
@@ -247,4 +285,9 @@ func (srv *server) ValidateUserStruct(ctx context.Context, createUserRequest *Cr
 func (srv *server) sendError(w http.ResponseWriter, err error, httpStatus int) {
 	srv.logger.Error(err)
 	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
+}
+
+func roleFromContext(ctx context.Context) string {
+	role, _ := ctx.Value(RoleContextKey).(string)
+	return role
 }
