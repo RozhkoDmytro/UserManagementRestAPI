@@ -20,16 +20,17 @@ type User struct {
 	DeletedAt time.Time `json:"-" gorm:"index"`
 }
 
+// Define a custom type for the context key
+type contextKey string
+
 const (
 	StrAdmin     = "admin"
 	StrModerator = "moderator"
 	StrUser      = "user"
 )
 
-// Define a custom type for the context key
-type contextKey string
-
 const (
 	RoleContextKey  contextKey = "role"
 	EmailContextKey contextKey = "email"
+	IDContextKey    contextKey = "id"
 )

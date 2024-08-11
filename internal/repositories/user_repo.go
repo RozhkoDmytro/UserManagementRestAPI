@@ -83,6 +83,17 @@ func (repo *UserRepo) UpdateUser(ctx context.Context, userID string, updatedData
 	}
 
 	// Apply the updates
+	// Check email uniqueness if it changes
+	if updatedData.Email != "" && updatedData.Email != user.Email {
+		var existingUser models.User
+		result := tx.First(&existingUser, "email = ?", updatedData.Email)
+		if result.RowsAffected > 0 {
+			repo.logger.Warn("The email is already occupied by another user.")
+			return nil, apperrors.DeletionFailedErr.AppendMessage("The email is already occupied by another user.")
+		}
+		user.Email = updatedData.Email
+	}
+
 	if updatedData.FirstName != "" {
 		user.FirstName = updatedData.FirstName
 	}
@@ -91,9 +102,6 @@ func (repo *UserRepo) UpdateUser(ctx context.Context, userID string, updatedData
 	}
 	if updatedData.Password != "" {
 		user.Password = updatedData.Password
-	}
-	if updatedData.Email != "" {
-		user.Email = updatedData.Email
 	}
 	if !updatedData.DeletedAt.IsZero() {
 		user.DeletedAt = updatedData.DeletedAt

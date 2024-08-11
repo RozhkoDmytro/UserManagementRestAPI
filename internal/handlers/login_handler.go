@@ -47,10 +47,6 @@ func (srv *loginHandler) sendError(w http.ResponseWriter, err error, httpStatus 
 	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
 }
 
-func (srv *loginHandler) decode(r *http.Request, v interface{}) error {
-	return json.NewDecoder(r.Body).Decode(v)
-}
-
 func (srv *loginHandler) respond(w http.ResponseWriter, data interface{}, status int) {
 	w.WriteHeader(status)
 	if data == nil {

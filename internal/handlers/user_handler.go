@@ -105,7 +105,7 @@ func (srv *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	role := roleFromContext(ctx)
 
-	if role != models.StrAdmin && role != models.StrModerator {
+	if role != models.StrAdmin {
 		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
 		return
 	}
@@ -128,7 +128,7 @@ func (srv *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	role := roleFromContext(ctx)
 
-	if role != models.StrAdmin && role != models.StrModerator {
+	if role != models.StrAdmin && userID != vars["id"] {
 		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
 		return
 	}
@@ -290,4 +290,9 @@ func (srv *userHandler) sendError(w http.ResponseWriter, err error, httpStatus i
 func roleFromContext(ctx context.Context) string {
 	role, _ := ctx.Value(models.RoleContextKey).(string)
 	return role
+}
+
+func IDFromContext(ctx context.Context) string {
+	ID, _ := ctx.Value(models.IDContextKey).(string)
+	return ID
 }
