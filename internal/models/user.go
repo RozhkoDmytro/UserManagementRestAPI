@@ -25,3 +25,11 @@ const (
 	StrModerator = "moderator"
 	StrUser      = "user"
 )
+
+// Define a custom type for the context key
+type contextKey string
+
+const (
+	RoleContextKey  contextKey = "role"
+	EmailContextKey contextKey = "email"
+)

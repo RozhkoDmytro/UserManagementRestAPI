@@ -13,14 +13,6 @@ import (
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 )
 
-// Define a custom type for the context key
-type contextKey string
-
-const (
-	RoleContextKey  contextKey = "role"
-	EmailContextKey contextKey = "email"
-)
-
 func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
@@ -60,8 +52,8 @@ func (srv *server) jwtMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			claims.Role = models.StrModerator // only for yourself account
 		}
 
-		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)
-		ctx = context.WithValue(ctx, EmailContextKey, claims.Email)
+		ctx := context.WithValue(r.Context(), models.RoleContextKey, claims.Role)
+		ctx = context.WithValue(ctx, models.EmailContextKey, claims.Email)
 		r = r.WithContext(ctx)
 		h(w, r)
 	}

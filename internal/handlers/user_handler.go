@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"context"
@@ -8,12 +8,30 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
-	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
-	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
-
+	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
+	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
+	"gitlab.com/jkozhemiaka/web-layout/internal/services"
+	"go.uber.org/zap"
 )
+
+type userHandler struct {
+	userService services.UserServiceInterface
+	logger      *zap.SugaredLogger
+	validator   *validator.Validate
+	cfg         *config.Config
+}
+
+func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config) *userHandler {
+	return &userHandler{
+		userService: userService,
+		logger:      logger,
+		validator:   validator,
+		cfg:         cfg,
+	}
+}
 
 const (
 	defaultPage     = 1
@@ -32,7 +50,7 @@ type CreateUserRequest struct {
 	RoleID    uint   `json:"role_id" validate:"required,oneof=1 2 3"`
 }
 
-func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		UserId string `json:"user_id"`
 	}
@@ -75,7 +93,7 @@ func (srv *server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, createUserResponse, http.StatusCreated)
 }
 
-func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		UserID    uint      `json:"user_id"`
 		DeletedAt time.Time `json:"deleted_at"`
@@ -104,7 +122,7 @@ func (srv *server) deleteUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, res, http.StatusOK)
 }
 
-func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
@@ -122,7 +140,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Validate the User struct
-	err = srv.validate.Struct(createUserRequest)
+	err = srv.validator.Struct(createUserRequest)
 	if err != nil {
 		srv.sendError(w, err, http.StatusBadRequest)
 		return
@@ -154,7 +172,7 @@ func (srv *server) updateUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, nil, http.StatusCreated)
 }
 
-func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
@@ -168,7 +186,7 @@ func (srv *server) getUser(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, user, http.StatusCreated)
 }
 
-func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	ctx := r.Context()
 
@@ -189,7 +207,7 @@ func (srv *server) listUsers(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, users, http.StatusOK)
 }
 
-func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
+func (srv *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		Count uint `json:"count"`
 	}
@@ -205,25 +223,7 @@ func (srv *server) countUsers(w http.ResponseWriter, r *http.Request) {
 	srv.respond(w, res, http.StatusOK)
 }
 
-func (srv *server) login(w http.ResponseWriter, r *http.Request) {
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	user, err := srv.userService.GetUserByEmail(r.Context(), email)
-	if err != nil {
-		srv.sendError(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	err = auth.Access(email, password, user)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(srv.cfg.JwtKey)))
-}
-
-func (srv *server) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
+func (srv *userHandler) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
 	validPage, err = strconv.Atoi(page)
 	if err != nil {
 		if page != "" {
@@ -250,11 +250,11 @@ func (srv *server) validateListUsersParam(page, pageSize string) (validPage, val
 	return validPage, validPageSize, nil
 }
 
-func (srv *server) decode(r *http.Request, v interface{}) error {
+func (srv *userHandler) decode(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func (srv *server) respond(w http.ResponseWriter, data interface{}, status int) {
+func (srv *userHandler) respond(w http.ResponseWriter, data interface{}, status int) {
 	w.WriteHeader(status)
 	if data == nil {
 		return
@@ -266,9 +266,9 @@ func (srv *server) respond(w http.ResponseWriter, data interface{}, status int) 
 	}
 }
 
-func (srv *server) ValidateUserStruct(ctx context.Context, createUserRequest *CreateUserRequest) error {
+func (srv *userHandler) ValidateUserStruct(ctx context.Context, createUserRequest *CreateUserRequest) error {
 	// Validate the User struct
-	err := srv.validate.Struct(createUserRequest)
+	err := srv.validator.Struct(createUserRequest)
 	if err != nil {
 		return err
 	}
@@ -282,12 +282,12 @@ func (srv *server) ValidateUserStruct(ctx context.Context, createUserRequest *Cr
 	return nil
 }
 
-func (srv *server) sendError(w http.ResponseWriter, err error, httpStatus int) {
+func (srv *userHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
 	srv.logger.Error(err)
 	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
 }
 
 func roleFromContext(ctx context.Context) string {
-	role, _ := ctx.Value(RoleContextKey).(string)
+	role, _ := ctx.Value(models.RoleContextKey).(string)
 	return role
 }

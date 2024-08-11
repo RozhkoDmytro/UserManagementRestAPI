@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/handlers"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
@@ -23,7 +24,7 @@ type server struct {
 	db          *gorm.DB
 	router      Router
 	logger      *zap.SugaredLogger
-	validate    *validator.Validate
+	validator   *validator.Validate
 	cfg         *config.Config
 	userService services.UserServiceInterface
 }
@@ -33,13 +34,16 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) initializeRoutes() {
-	srv.router.Post("/users", srv.contextExpire(srv.createUserHandler))
-	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(srv.getUser))
-	srv.router.Delete("/users/{id}", srv.jwtMiddleware(srv.deleteUser))
-	srv.router.Update("/users/{id}", srv.jwtMiddleware(srv.updateUser))
-	srv.router.Get("/users", srv.contextExpire(srv.listUsers))
-	srv.router.Get("/users/count", srv.contextExpire(srv.countUsers))
-	srv.router.Post("/login", srv.contextExpire(srv.login))
+	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg)
+	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg)
+
+	srv.router.Post("/users", srv.contextExpire(userHandler.CreateUserHandler))
+	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(userHandler.GetUser))
+	srv.router.Delete("/users/{id}", srv.jwtMiddleware(userHandler.DeleteUser))
+	srv.router.Update("/users/{id}", srv.jwtMiddleware(userHandler.UpdateUser))
+	srv.router.Get("/users", srv.contextExpire(userHandler.ListUsers))
+	srv.router.Get("/users/count", srv.contextExpire(userHandler.CountUsers))
+	srv.router.Post("/login", srv.contextExpire(loginHandler.Login))
 }
 
 func Run() {
@@ -70,7 +74,7 @@ func Run() {
 		db:          db,
 		router:      srvRouter,
 		logger:      logger.Sugar(),
-		validate:    validate,
+		validator:   validate,
 		cfg:         cfg,
 		userService: userService,
 	}

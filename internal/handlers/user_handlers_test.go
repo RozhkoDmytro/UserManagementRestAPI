@@ -1,4 +1,4 @@
-package server
+package handlers
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -34,7 +33,7 @@ const (
 	domain  = "@example.com"
 )
 
-func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *server) {
+func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *userHandler) {
 	os.Setenv("CONFIG_PATH", "../../configs/.sample.env")
 	defer os.Unsetenv("CONFIG_PATH")
 
@@ -60,19 +59,12 @@ func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *server) 
 	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
 
 	// Initialize validator
-	validate := validator.New()
-	validate.RegisterValidation("password", myValidate.Password)
+	validator := validator.New()
+	validator.RegisterValidation("password", myValidate.Password)
 
-	srvRouter := &router{mux: mux.NewRouter()}
-	srv := &server{
-		db:          db,
-		router:      srvRouter,
-		logger:      logger.Sugar(),
-		validate:    validate,
-		cfg:         cfg,
-		userService: userService,
-	}
-	return mockUserService, srv
+	userHandler := NewUserHandler(userService, logger.Sugar(), validator, cfg)
+
+	return mockUserService, userHandler
 }
 
 // GenerateEmail creates a random email address
@@ -102,8 +94,7 @@ func TestCreateUserHandler(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer "+string(token))
 			w := httptest.NewRecorder()
 
-			srv.createUserHandler(w, req)
-			srv.ServeHTTP(w, req)
+			srv.CreateUserHandler(w, req)
 
 			assert.Equal(t, http.StatusCreated, w.Code)
 		})
@@ -116,8 +107,7 @@ func TestCreateUserHandler(t *testing.T) {
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		w := httptest.NewRecorder()
 
-		srv.createUserHandler(w, req)
-		srv.ServeHTTP(w, req)
+		srv.CreateUserHandler(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -145,13 +135,12 @@ func TestGetUserHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/user/8", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		srv.getUser(w, req)
-		srv.ServeHTTP(w, req)
+		srv.GetUser(w, req)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -164,13 +153,12 @@ func TestGetUserHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/users/999", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		srv.getUser(w, req)
-		srv.ServeHTTP(w, req)
+		srv.GetUser(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
@@ -199,13 +187,12 @@ func TestUpdateUserHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
 		req.Header.Set("Authorization", "Bearer "+string(token))
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		srv.updateUser(w, req)
-		srv.ServeHTTP(w, req)
+		srv.UpdateUser(w, req)
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 	})
@@ -220,8 +207,7 @@ func TestUpdateUserHandler(t *testing.T) {
 		req = mux.SetURLVars(req, map[string]string{"id": "8"})
 		w := httptest.NewRecorder()
 
-		srv.updateUser(w, req)
-		srv.ServeHTTP(w, req)
+		srv.UpdateUser(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -257,13 +243,12 @@ func TestListUsersHandler(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/users?page=1&page_size=10", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		srv.listUsers(w, req)
-		srv.ServeHTTP(w, req)
+		srv.ListUsers(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
@@ -274,13 +259,12 @@ func TestListUsersHandler(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/users?page=bad&page_size=10", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		w := httptest.NewRecorder()
 
-		srv.listUsers(w, req)
-		srv.ServeHTTP(w, req)
+		srv.ListUsers(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
@@ -318,39 +302,16 @@ func TestDeleteUserHandler(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodDelete, "/users/999", nil)
 		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, EmailContextKey, newEmail)
+		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
+		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
 		req = req.WithContext(ctx)
 		req = mux.SetURLVars(req, map[string]string{"id": "999"})
 		w := httptest.NewRecorder()
 
-		srv.deleteUser(w, req)
-		srv.ServeHTTP(w, req)
+		srv.DeleteUser(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
 	// Add more test cases as needed
-}
-
-func TestLogin(t *testing.T) {
-	_, srv := InitializeMock(t)
-
-	t.Run("success", func(t *testing.T) {
-		newEmail := "admin@example.com" // Use a fixed email for predictability
-
-		// Encode the form values
-		form := url.Values{}
-		form.Add("email", newEmail)
-		form.Add("password", "securePassword7!")
-		reqBody := form.Encode()
-
-		req := httptest.NewRequest(http.MethodPost, "/login", bytes.NewBufferString(reqBody))
-		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-		w := httptest.NewRecorder()
-
-		srv.login(w, req)
-
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
 }
