@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS users (
     deleted_at TIMESTAMP WITH TIME ZONE
 );
 
+-- Create votes table
+CREATE TABLE IF NOT EXISTS votes (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    profile_id INTEGER REFERENCES users(id),
+    value INTEGER NOT NULL CHECK (value IN (-1, 1)),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, profile_id)
+);
+
 -- Set default role for existing users
 UPDATE users SET role_id = (SELECT id FROM roles WHERE name = 'user') WHERE role_id IS NULL;
 
