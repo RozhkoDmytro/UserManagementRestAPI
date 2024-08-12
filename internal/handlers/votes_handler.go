@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	"go.uber.org/zap"
@@ -25,21 +24,35 @@ func NewVotesHandler(userService services.UserServiceInterface, logger *zap.Suga
 }
 
 func (h *votesHandler) Like(w http.ResponseWriter, r *http.Request) {
-	email := r.FormValue("email")
-	password := r.FormValue("password")
-
-	user, err := h.userService.GetUserByEmail(r.Context(), email)
+	type CreateUserResponse struct {
+		Count uint `json:"count"`
+	}
+	ctx := r.Context()
+	count, err := h.userService.CountUsers(ctx)
 	if err != nil {
-		h.sendError(w, err, http.StatusInternalServerError)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
+	res := &CreateUserResponse{
+		Count: uint(count),
+	}
+	h.respond(w, res, http.StatusOK)
+}
 
-	err = auth.Access(email, password, user)
+func (h *votesHandler) DisLike(w http.ResponseWriter, r *http.Request) {
+	type CreateUserResponse struct {
+		Count uint `json:"count"`
+	}
+	ctx := r.Context()
+	count, err := h.userService.CountUsers(ctx)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(h.cfg.JwtKey)))
+	res := &CreateUserResponse{
+		Count: uint(count),
+	}
+	h.respond(w, res, http.StatusOK)
 }
 
 func (h *votesHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {

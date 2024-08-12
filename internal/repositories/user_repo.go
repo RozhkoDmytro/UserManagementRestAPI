@@ -25,6 +25,8 @@ type UserRepoInterface interface {
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	Like(ctx context.Context, userID string) error
+	DisLike(ctx context.Context, userID string) error
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -162,4 +164,26 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 		return nil, tx.Error
 	}
 	return &user, nil
+}
+
+func (repo *UserRepo) Like(ctx context.Context, userID string) error {
+	var count int64
+	tx := repo.db.WithContext(ctx)
+	result := tx.Model(&models.User{}).Where("deleted_at IS NULL OR deleted_at = ?", time.Time{}).Count(&count)
+	if result.Error != nil {
+		repo.logger.Error(result.Error)
+		return apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
+	}
+	return nil
+}
+
+func (repo *UserRepo) DisLike(ctx context.Context, userID string) error {
+	var count int64
+	tx := repo.db.WithContext(ctx)
+	result := tx.Model(&models.User{}).Where("deleted_at IS NULL OR deleted_at = ?", time.Time{}).Count(&count)
+	if result.Error != nil {
+		repo.logger.Error(result.Error)
+		return apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
+	}
+	return nil
 }

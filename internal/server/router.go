@@ -37,7 +37,3 @@ func (router *router) Delete(path string, handlerFunc http.HandlerFunc) {
 func (router *router) Update(path string, handlerFunc http.HandlerFunc) {
 	router.mux.HandleFunc(path, handlerFunc).Methods(http.MethodPut)
 }
-
-func (router *router) Login(path string, handlerFunc http.HandlerFunc) {
-	router.mux.HandleFunc(path, handlerFunc).Methods(http.MethodPut)
-}

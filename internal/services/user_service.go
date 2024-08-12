@@ -24,6 +24,8 @@ type UserServiceInterface interface {
 	ListUsers(ctx context.Context, page, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	Like(ctx context.Context, userID string) error
+	DisLike(ctx context.Context, userID string) error
 }
 
 func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
@@ -101,4 +103,24 @@ func (service *UserService) GetUserByEmail(ctx context.Context, email string) (*
 	}
 
 	return user, nil
+}
+
+func (service *UserService) Like(ctx context.Context, userID string) error {
+	_, err := service.userRepo.CountUsers(ctx)
+	if err != nil {
+		service.logger.Error(err)
+		return err
+	}
+
+	return nil
+}
+
+func (service *UserService) DisLike(ctx context.Context, userID string) error {
+	_, err := service.userRepo.CountUsers(ctx)
+	if err != nil {
+		service.logger.Error(err)
+		return err
+	}
+
+	return nil
 }
