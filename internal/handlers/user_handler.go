@@ -50,28 +50,28 @@ type CreateUserRequest struct {
 	RoleID    uint   `json:"role_id" validate:"required,oneof=1 2 3"`
 }
 
-func (srv *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		UserId string `json:"user_id"`
 	}
 
 	createUserRequest := &CreateUserRequest{}
-	err := srv.decode(r, createUserRequest)
+	err := h.decode(r, createUserRequest)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	err = srv.ValidateUserStruct(r.Context(), createUserRequest)
+	err = h.ValidateUserStruct(r.Context(), createUserRequest)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 
 	}
 
 	hash, err := passwords.HashPassword(createUserRequest.Password)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -83,17 +83,17 @@ func (srv *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request
 		RoleID:    1, // bad approach
 	}
 
-	userId, err := srv.userService.CreateUser(r.Context(), user)
+	userId, err := h.userService.CreateUser(r.Context(), user)
 	if err != nil {
-		srv.sendError(w, err, http.StatusInternalServerError)
+		h.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	createUserResponse := &CreateUserResponse{UserId: userId}
-	srv.respond(w, createUserResponse, http.StatusCreated)
+	h.respond(w, createUserResponse, http.StatusCreated)
 }
 
-func (srv *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		UserID    uint      `json:"user_id"`
 		DeletedAt time.Time `json:"deleted_at"`
@@ -106,49 +106,49 @@ func (srv *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	role := roleFromContext(ctx)
 
 	if role != models.StrAdmin {
-		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		h.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
 		return
 	}
 
-	user, err := srv.userService.DeleteUser(r.Context(), userID)
+	user, err := h.userService.DeleteUser(r.Context(), userID)
 	if err != nil {
-		srv.sendError(w, err, http.StatusInternalServerError)
+		h.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 	res := &CreateUserResponse{
 		UserID:    user.ID,
 		DeletedAt: user.DeletedAt,
 	}
-	srv.respond(w, res, http.StatusOK)
+	h.respond(w, res, http.StatusOK)
 }
 
-func (srv *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
 	role := roleFromContext(ctx)
 
 	if role != models.StrAdmin && userID != vars["id"] {
-		srv.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
+		h.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
 		return
 	}
 
 	createUserRequest := &CreateUserRequest{}
-	err := srv.decode(r, createUserRequest)
+	err := h.decode(r, createUserRequest)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 	// Validate the User struct
-	err = srv.validator.Struct(createUserRequest)
+	err = h.validator.Struct(createUserRequest)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	hash, err := passwords.HashPassword(createUserRequest.Password)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -163,71 +163,71 @@ func (srv *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		updatedData.RoleID = createUserRequest.RoleID
 	}
 
-	_, err = srv.userService.UpdateUser(ctx, userID, updatedData)
+	_, err = h.userService.UpdateUser(ctx, userID, updatedData)
 	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
+		h.sendError(w, err, http.StatusNotFound)
 		return
 	}
 
-	srv.respond(w, nil, http.StatusCreated)
+	h.respond(w, nil, http.StatusCreated)
 }
 
-func (srv *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
 
-	user, err := srv.userService.GetUser(ctx, userID)
+	user, err := h.userService.GetUser(ctx, userID)
 	if err != nil {
-		srv.sendError(w, err, http.StatusNotFound)
+		h.sendError(w, err, http.StatusNotFound)
 		return
 	}
 
-	srv.respond(w, user, http.StatusCreated)
+	h.respond(w, user, http.StatusCreated)
 }
 
-func (srv *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	ctx := r.Context()
 
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
 
-	intPage, intPageSize, err := srv.validateListUsersParam(page, pageSize)
+	intPage, intPageSize, err := h.validateListUsersParam(page, pageSize)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-	users, err := srv.userService.ListUsers(ctx, intPage, intPageSize)
+	users, err := h.userService.ListUsers(ctx, intPage, intPageSize)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
-	srv.respond(w, users, http.StatusOK)
+	h.respond(w, users, http.StatusOK)
 }
 
-func (srv *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
+func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
-	count, err := srv.userService.CountUsers(ctx)
+	count, err := h.userService.CountUsers(ctx)
 	if err != nil {
-		srv.sendError(w, err, http.StatusBadRequest)
+		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 	res := &CreateUserResponse{
 		Count: uint(count),
 	}
-	srv.respond(w, res, http.StatusOK)
+	h.respond(w, res, http.StatusOK)
 }
 
-func (srv *userHandler) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
+func (h *userHandler) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
 	validPage, err = strconv.Atoi(page)
 	if err != nil {
 		if page != "" {
-			srv.logger.Error(err)
+			h.logger.Error(err)
 		}
 		validPage = defaultPage
 	}
@@ -235,7 +235,7 @@ func (srv *userHandler) validateListUsersParam(page, pageSize string) (validPage
 	validPageSize, err = strconv.Atoi(pageSize)
 	if err != nil {
 		if pageSize != "" {
-			srv.logger.Error(err)
+			h.logger.Error(err)
 		}
 		validPageSize = defaultPageSize
 	}
@@ -250,11 +250,11 @@ func (srv *userHandler) validateListUsersParam(page, pageSize string) (validPage
 	return validPage, validPageSize, nil
 }
 
-func (srv *userHandler) decode(r *http.Request, v interface{}) error {
+func (h *userHandler) decode(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-func (srv *userHandler) respond(w http.ResponseWriter, data interface{}, status int) {
+func (h *userHandler) respond(w http.ResponseWriter, data interface{}, status int) {
 	w.WriteHeader(status)
 	if data == nil {
 		return
@@ -262,19 +262,19 @@ func (srv *userHandler) respond(w http.ResponseWriter, data interface{}, status 
 
 	err := json.NewEncoder(w).Encode(data)
 	if err != nil {
-		srv.logger.Error(err)
+		h.logger.Error(err)
 	}
 }
 
-func (srv *userHandler) ValidateUserStruct(ctx context.Context, createUserRequest *CreateUserRequest) error {
+func (h *userHandler) ValidateUserStruct(ctx context.Context, createUserRequest *CreateUserRequest) error {
 	// Validate the User struct
-	err := srv.validator.Struct(createUserRequest)
+	err := h.validator.Struct(createUserRequest)
 	if err != nil {
 		return err
 	}
 
 	// Check if email is unique
-	existingUser, _ := srv.userService.GetUserByEmail(ctx, createUserRequest.Email)
+	existingUser, _ := h.userService.GetUserByEmail(ctx, createUserRequest.Email)
 	if existingUser != nil {
 		err := errors.New("email already in use")
 		return err
@@ -282,9 +282,9 @@ func (srv *userHandler) ValidateUserStruct(ctx context.Context, createUserReques
 	return nil
 }
 
-func (srv *userHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
-	srv.logger.Error(err)
-	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
+func (h *userHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
+	h.logger.Error(err)
+	h.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
 }
 
 func roleFromContext(ctx context.Context) string {

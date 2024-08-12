@@ -24,13 +24,13 @@ func NewLoginHandler(userService services.UserServiceInterface, logger *zap.Suga
 	}
 }
 
-func (srv *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	password := r.FormValue("password")
 
-	user, err := srv.userService.GetUserByEmail(r.Context(), email)
+	user, err := h.userService.GetUserByEmail(r.Context(), email)
 	if err != nil {
-		srv.sendError(w, err, http.StatusInternalServerError)
+		h.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (srv *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
-	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(srv.cfg.JwtKey)))
+	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(h.cfg.JwtKey)))
 }
 
 func (srv *loginHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
