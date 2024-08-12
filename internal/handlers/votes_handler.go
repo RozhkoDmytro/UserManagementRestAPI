@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	"go.uber.org/zap"
@@ -27,7 +29,16 @@ func (h *votesHandler) Like(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		Count uint `json:"count"`
 	}
+
 	ctx := r.Context()
+	vars := mux.Vars(r)
+	userID := IDFromContext(ctx)
+
+	if userID == vars["id"] {
+		h.sendError(w, errors.New("you can't vote for yourself"), http.StatusBadRequest)
+		return
+	}
+
 	count, err := h.userService.CountUsers(ctx)
 	if err != nil {
 		h.sendError(w, err, http.StatusBadRequest)
@@ -43,7 +54,16 @@ func (h *votesHandler) DisLike(w http.ResponseWriter, r *http.Request) {
 	type CreateUserResponse struct {
 		Count uint `json:"count"`
 	}
+
 	ctx := r.Context()
+	vars := mux.Vars(r)
+	userID := IDFromContext(ctx)
+
+	if userID == vars["id"] {
+		h.sendError(w, errors.New("you can't vote for yourself"), http.StatusBadRequest)
+		return
+	}
+
 	count, err := h.userService.CountUsers(ctx)
 	if err != nil {
 		h.sendError(w, err, http.StatusBadRequest)
