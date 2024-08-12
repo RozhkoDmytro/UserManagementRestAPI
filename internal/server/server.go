@@ -45,8 +45,8 @@ func (srv *server) initializeRoutes() {
 	srv.router.Get("/users", srv.contextExpire(userHandler.ListUsers))
 	srv.router.Get("/users/count", srv.contextExpire(userHandler.CountUsers))
 	srv.router.Post("/login", srv.contextExpire(loginHandler.Login))
-	srv.router.Post("/like/{id:[0-9]+}", srv.contextExpire(votesHandler.Like))
-	srv.router.Post("/dislike/{id:[0-9]+}", srv.contextExpire(votesHandler.DisLike))
+	srv.router.Post("/like/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Like))
+	srv.router.Post("/dislike/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.DisLike))
 }
 
 func Run() {
