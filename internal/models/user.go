@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Role struct {
 	ID   uint   `json:"role_id" gorm:"primaryKey"`
@@ -43,3 +47,24 @@ const (
 	EmailContextKey contextKey = "email"
 	IDContextKey    contextKey = "id"
 )
+
+// AfterSave - a hook to automatically update the rating after saving a vote
+func (v *Vote) AfterSave(tx *gorm.DB) (err error) {
+	var rating int
+	// Calculate a new rating for the profile that was voted for
+	err = tx.Model(&Vote{}).
+		Where("profile_id = ?", v.ProfileID).
+		Select("COALESCE(SUM(value), 0)").
+		Scan(&rating).Error
+	if err != nil {
+		return err
+	}
+
+	// Update the rating in the user table
+	err = tx.Model(&User{}).Where("id = ?", v.ProfileID).Update("rating", rating).Error
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
