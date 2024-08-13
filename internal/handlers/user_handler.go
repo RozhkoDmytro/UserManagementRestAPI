@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -18,6 +17,7 @@ import (
 )
 
 type userHandler struct {
+	*BaseHandler
 	userService services.UserServiceInterface
 	logger      *zap.SugaredLogger
 	validator   *validator.Validate
@@ -26,6 +26,7 @@ type userHandler struct {
 
 func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config) *userHandler {
 	return &userHandler{
+		BaseHandler: NewBaseHandler(logger),
 		userService: userService,
 		logger:      logger,
 		validator:   validator,
@@ -103,7 +104,7 @@ func (h *userHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	userID := vars["id"]
 
 	ctx := r.Context()
-	role := roleFromContext(ctx)
+	role := h.GetAuthenticatedRole(ctx)
 
 	if role != models.StrAdmin {
 		h.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
@@ -126,7 +127,7 @@ func (h *userHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userID := vars["id"]
 	ctx := r.Context()
-	role := roleFromContext(ctx)
+	role := h.GetAuthenticatedRole(ctx)
 
 	if role != models.StrAdmin && userID != vars["id"] {
 		h.sendError(w, errors.New("premission is denided"), http.StatusBadRequest)
@@ -250,22 +251,6 @@ func (h *userHandler) validateListUsersParam(page, pageSize string) (validPage, 
 	return validPage, validPageSize, nil
 }
 
-func (h *userHandler) decode(r *http.Request, v interface{}) error {
-	return json.NewDecoder(r.Body).Decode(v)
-}
-
-func (h *userHandler) respond(w http.ResponseWriter, data interface{}, status int) {
-	w.WriteHeader(status)
-	if data == nil {
-		return
-	}
-
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		h.logger.Error(err)
-	}
-}
-
 func (h *userHandler) ValidateUserStruct(ctx context.Context, createUserRequest *CreateUserRequest) error {
 	// Validate the User struct
 	err := h.validator.Struct(createUserRequest)
@@ -280,19 +265,4 @@ func (h *userHandler) ValidateUserStruct(ctx context.Context, createUserRequest 
 		return err
 	}
 	return nil
-}
-
-func (h *userHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
-	h.logger.Error(err)
-	h.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
-}
-
-func roleFromContext(ctx context.Context) string {
-	role, _ := ctx.Value(models.RoleContextKey).(string)
-	return role
-}
-
-func IDFromContext(ctx context.Context) string {
-	ID, _ := ctx.Value(models.IDContextKey).(string)
-	return ID
 }

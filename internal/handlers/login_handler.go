@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
@@ -11,6 +10,7 @@ import (
 )
 
 type loginHandler struct {
+	*BaseHandler
 	userService services.UserServiceInterface
 	logger      *zap.SugaredLogger
 	cfg         *config.Config
@@ -18,6 +18,7 @@ type loginHandler struct {
 
 func NewLoginHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config) *loginHandler {
 	return &loginHandler{
+		BaseHandler: NewBaseHandler(logger),
 		userService: userService,
 		logger:      logger,
 		cfg:         cfg,
@@ -40,21 +41,4 @@ func (h *loginHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(auth.GenerateTokenHandler(email, user.Role.Name, user.ID, []byte(h.cfg.JwtKey)))
-}
-
-func (srv *loginHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
-	srv.logger.Error(err)
-	srv.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
-}
-
-func (srv *loginHandler) respond(w http.ResponseWriter, data interface{}, status int) {
-	w.WriteHeader(status)
-	if data == nil {
-		return
-	}
-
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		srv.logger.Error(err)
-	}
 }

@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -16,6 +14,7 @@ import (
 )
 
 type votesHandler struct {
+	*BaseHandler
 	userService services.UserServiceInterface
 	logger      *zap.SugaredLogger
 	cfg         *config.Config
@@ -23,6 +22,7 @@ type votesHandler struct {
 
 func NewVotesHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config) *votesHandler {
 	return &votesHandler{
+		BaseHandler: NewBaseHandler(logger),
 		userService: userService,
 		logger:      logger,
 		cfg:         cfg,
@@ -50,14 +50,14 @@ func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 	}
 
 	// Getting the ID of the voting user (let's say it is in the context or token)
-	userID, err := strconv.Atoi(GetAuthenticatedUserID(r.Context()))
+	userID, err := strconv.Atoi(h.GetAuthenticatedUserID(r.Context()))
 	if err != nil {
 		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
 
 	if userID == profileID {
-		err := errors.New("you cannot vote for yourself.")
+		err := errors.New("you cannot vote for yourself")
 		h.sendError(w, err, http.StatusForbidden)
 		return
 	}
@@ -73,33 +73,11 @@ func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 	// Attempting to create or update a voice
 	voteId, err := h.userService.Vote(ctx, vote)
 	if err != nil {
-		h.logger.Error("Failed to cast vote", zap.Error(err))
-		http.Error(w, "Failed to cast vote.", http.StatusInternalServerError)
+		err := errors.New("failed to cast vote")
+		h.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
 
 	createUserResponse := &CreateUserResponse{VoteId: voteId}
 	h.respond(w, createUserResponse, http.StatusCreated)
-}
-
-func (h *votesHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
-	h.logger.Error(err)
-	h.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
-}
-
-func (h *votesHandler) respond(w http.ResponseWriter, data interface{}, status int) {
-	w.WriteHeader(status)
-	if data == nil {
-		return
-	}
-
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		h.logger.Error(err)
-	}
-}
-
-func GetAuthenticatedUserID(ctx context.Context) string {
-	ID, _ := ctx.Value(models.IDContextKey).(string)
-	return ID
 }
