@@ -47,7 +47,22 @@ func (m *MockUserServiceInterface) CreateUser(ctx context.Context, user *models.
 // CreateUser indicates an expected call of CreateUser.
 func (mr *MockUserServiceInterfaceMockRecorder) CreateUser(ctx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserServiceInterface)(nil).CreateUser), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUser", reflect.TypeOf((*MockUserServiceInterface)(nil).Vote), ctx, user)
+}
+
+// Vote mocks base method.
+func (m *MockUserServiceInterface) Vote(ctx context.Context, user *models.User) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Vote", ctx, user)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Vote indicates an expected call of Vote.
+func (mr *MockUserServiceInterfaceMockRecorder) Vote(ctx, user interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Vote", reflect.TypeOf((*MockUserServiceInterface)(nil).Vote), ctx, user)
 }
 
 // DeleteUser mocks base method.

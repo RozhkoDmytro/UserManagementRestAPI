@@ -48,7 +48,7 @@ type CreateUserRequest struct {
 	FirstName string `json:"first_name" validate:"required"`
 	LastName  string `json:"last_name" validate:"required"`
 	Password  string `json:"password" validate:"required,min=8,password"`
-	RoleID    uint   `json:"role_id" validate:"required,oneof=1 2 3"`
+	RoleID    uint   `json:"role_id" validate:"omitempty,oneof=1 2 3"`
 }
 
 func (h *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) {

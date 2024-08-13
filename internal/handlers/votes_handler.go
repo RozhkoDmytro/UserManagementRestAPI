@@ -73,7 +73,6 @@ func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 	// Attempting to create or update a voice
 	voteId, err := h.userService.Vote(ctx, vote)
 	if err != nil {
-		err := errors.New("failed to cast vote")
 		h.sendError(w, err, http.StatusInternalServerError)
 		return
 	}
