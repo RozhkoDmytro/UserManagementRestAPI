@@ -54,6 +54,19 @@ var (
 		Code:     "NO_RECORD_FOUND",
 		HTTPCode: 404,
 	}
+
+	// Define the vote cooldown error
+	VoteCooldownErr = AppError{
+		Message:  "You can only vote once per hour",
+		Code:     "VOTE_COOLDOWN_ERR",
+		HTTPCode: http.StatusTooManyRequests,
+	}
+	// Add the update failed error
+	UpdateFailedErr = AppError{
+		Message:  "Failed to update the record",
+		Code:     "UPDATE_FAILED_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
 )
 
 func (appError *AppError) Error() string {

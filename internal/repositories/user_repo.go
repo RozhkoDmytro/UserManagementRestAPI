@@ -176,20 +176,25 @@ func (repo *UserRepo) Vote(ctx context.Context, vote *models.Vote) (*models.Vote
 		return nil, apperrors.InsertionFailedErr.AppendMessage(result.Error.Error())
 	}
 
-	if result.RowsAffected == 0 {
-		// If the voice does not exist, create a new one
-		if err := tx.Create(vote).Error; err != nil {
-			repo.logger.Error("Failed to create vote", zap.Error(err))
-			return nil, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+	// Check if the user has voted for this profile within the last hour
+	if result.RowsAffected > 0 {
+		if time.Since(existingVote.CreatedAt) < time.Hour {
+			return nil, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
 		}
-		return vote, nil
-	} else {
-		// If the voice exists, update the value
+
+		// Update existing vote
 		existingVote.Value = vote.Value
 		if err := tx.Save(&existingVote).Error; err != nil {
 			repo.logger.Error("Failed to update vote", zap.Error(err))
-			return nil, apperrors.DeletionFailedErr.AppendMessage(err.Error())
+			return nil, apperrors.UpdateFailedErr.AppendMessage(err.Error())
 		}
 		return &existingVote, nil
 	}
+
+	// Create new vote
+	if err := tx.Create(vote).Error; err != nil {
+		repo.logger.Error("Failed to create vote", zap.Error(err))
+		return nil, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+	}
+	return vote, nil
 }
