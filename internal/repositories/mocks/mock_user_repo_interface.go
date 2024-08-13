@@ -50,34 +50,19 @@ func (mr *MockUserRepoInterfaceMockRecorder) CountUsers(ctx interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUsers", reflect.TypeOf((*MockUserRepoInterface)(nil).CountUsers), ctx)
 }
 
-// Like mocks base method.
-func (m *MockUserRepoInterface) Like(ctx context.Context, userID string)  error {
+// CreateUser mocks base method.
+func (m *MockUserRepoInterface) Vote(ctx context.Context, user *models.Vote) (*models.Vote, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Like", ctx, userID)
-	//ret0, _ := ret[0].(*models.User)
+	ret := m.ctrl.Call(m, "Vote", ctx, user)
+	ret0, _ := ret[0].(*models.Vote)
 	ret1, _ := ret[1].(error)
-	return ret1
+	return ret0, ret1
 }
 
-// Like indicates an expected call of DeleteUser.
-func (mr *MockUserRepoInterfaceMockRecorder) Like(ctx, userID interface{}) *gomock.Call {
+// CreateUser indicates an expected call of CreateUser.
+func (mr *MockUserRepoInterfaceMockRecorder) Vote(ctx, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Like", reflect.TypeOf((*MockUserRepoInterface)(nil).Like), ctx, userID)
-}
-
-// Like mocks base method.
-func (m *MockUserRepoInterface) DisLike(ctx context.Context, userID string)  error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DisLike", ctx, userID)
-	//ret0, _ := ret[0].(*models.User)
-	ret1, _ := ret[1].(error)
-	return ret1
-}
-
-// Like indicates an expected call of DeleteUser.
-func (mr *MockUserRepoInterfaceMockRecorder) DisLike(ctx, userID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisLike", reflect.TypeOf((*MockUserRepoInterface)(nil).DisLike), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Vote", reflect.TypeOf((*MockUserRepoInterface)(nil).Vote), ctx, user)
 }
 
 // CreateUser mocks base method.

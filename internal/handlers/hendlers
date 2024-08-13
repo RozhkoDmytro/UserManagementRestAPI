@@ -1,0 +1,30 @@
+/* package handlers
+
+import (
+	"context"
+	"net/http"
+
+	"gitlab.com/jkozhemiaka/web-layout/internal/models"
+)
+
+type handlers interface {
+	votesHandler
+	userHandler
+	loginHandler
+}
+
+func (h *handlers) sendError(w http.ResponseWriter, err error, httpStatus int) {
+	h.logger.Error(err)
+	h.respond(w, &ErrorResponse{Message: err.Error()}, httpStatus)
+}
+
+func roleFromContext(ctx context.Context) string {
+	role, _ := ctx.Value(models.RoleContextKey).(string)
+	return role
+}
+
+func IDFromContext(ctx context.Context) string {
+	ID, _ := ctx.Value(models.IDContextKey).(string)
+	return ID
+}
+*/

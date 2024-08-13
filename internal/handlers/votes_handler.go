@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
+	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	"go.uber.org/zap"
 )
@@ -26,53 +30,56 @@ func NewVotesHandler(userService services.UserServiceInterface, logger *zap.Suga
 }
 
 func (h *votesHandler) Like(w http.ResponseWriter, r *http.Request) {
-	type CreateUserResponse struct {
-		Count uint `json:"count"`
-	}
-
-	ctx := r.Context()
-	vars := mux.Vars(r)
-	userID := IDFromContext(ctx)
-
-	if userID == vars["id"] {
-		h.sendError(w, errors.New("you can't vote for yourself"), http.StatusBadRequest)
-		return
-	}
-
-	count, err := h.userService.CountUsers(ctx)
-	if err != nil {
-		h.sendError(w, err, http.StatusBadRequest)
-		return
-	}
-	res := &CreateUserResponse{
-		Count: uint(count),
-	}
-	h.respond(w, res, http.StatusOK)
+	h.vote(w, r, 1)
 }
 
-func (h *votesHandler) DisLike(w http.ResponseWriter, r *http.Request) {
+func (h *votesHandler) Dislike(w http.ResponseWriter, r *http.Request) {
+	h.vote(w, r, -1)
+}
+
+func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 	type CreateUserResponse struct {
-		Count uint `json:"count"`
+		VoteId string `json:"vote_id"`
 	}
 
-	ctx := r.Context()
 	vars := mux.Vars(r)
-	userID := IDFromContext(ctx)
-
-	if userID == vars["id"] {
-		h.sendError(w, errors.New("you can't vote for yourself"), http.StatusBadRequest)
-		return
-	}
-
-	count, err := h.userService.CountUsers(ctx)
+	profileID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-	res := &CreateUserResponse{
-		Count: uint(count),
+
+	// Getting the ID of the voting user (let's say it is in the context or token)
+	userID, err := strconv.Atoi(GetAuthenticatedUserID(r.Context()))
+	if err != nil {
+		h.sendError(w, err, http.StatusBadRequest)
+		return
 	}
-	h.respond(w, res, http.StatusOK)
+
+	if userID == profileID {
+		err := errors.New("you cannot vote for yourself.")
+		h.sendError(w, err, http.StatusForbidden)
+		return
+	}
+
+	ctx := r.Context()
+	vote := &models.Vote{
+		UserID:    uint(userID),
+		ProfileID: uint(profileID),
+		Value:     value,
+		CreatedAt: time.Now(),
+	}
+
+	// Attempting to create or update a voice
+	voteId, err := h.userService.Vote(ctx, vote)
+	if err != nil {
+		h.logger.Error("Failed to cast vote", zap.Error(err))
+		http.Error(w, "Failed to cast vote.", http.StatusInternalServerError)
+		return
+	}
+
+	createUserResponse := &CreateUserResponse{VoteId: voteId}
+	h.respond(w, createUserResponse, http.StatusCreated)
 }
 
 func (h *votesHandler) sendError(w http.ResponseWriter, err error, httpStatus int) {
@@ -90,4 +97,9 @@ func (h *votesHandler) respond(w http.ResponseWriter, data interface{}, status i
 	if err != nil {
 		h.logger.Error(err)
 	}
+}
+
+func GetAuthenticatedUserID(ctx context.Context) string {
+	ID, _ := ctx.Value(models.IDContextKey).(string)
+	return ID
 }

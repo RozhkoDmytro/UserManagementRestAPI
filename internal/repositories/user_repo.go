@@ -25,8 +25,7 @@ type UserRepoInterface interface {
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	Like(ctx context.Context, userID string) error
-	DisLike(ctx context.Context, userID string) error
+	Vote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -166,24 +165,31 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
-func (repo *UserRepo) Like(ctx context.Context, userID string) error {
-	var count int64
+func (repo *UserRepo) Vote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
 	tx := repo.db.WithContext(ctx)
-	result := tx.Model(&models.User{}).Where("deleted_at IS NULL OR deleted_at = ?", time.Time{}).Count(&count)
-	if result.Error != nil {
-		repo.logger.Error(result.Error)
-		return apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
-	}
-	return nil
-}
 
-func (repo *UserRepo) DisLike(ctx context.Context, userID string) error {
-	var count int64
-	tx := repo.db.WithContext(ctx)
-	result := tx.Model(&models.User{}).Where("deleted_at IS NULL OR deleted_at = ?", time.Time{}).Count(&count)
-	if result.Error != nil {
-		repo.logger.Error(result.Error)
-		return apperrors.DeletionFailedErr.AppendMessage(result.Error.Error())
+	var existingVote models.Vote
+	result := tx.Where("user_id = ? AND profile_id = ?", vote.UserID, vote.ProfileID).First(&existingVote)
+
+	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
+		repo.logger.Error("Failed to check existing vote", zap.Error(result.Error))
+		return nil, apperrors.InsertionFailedErr.AppendMessage(result.Error.Error())
 	}
-	return nil
+
+	if result.RowsAffected == 0 {
+		// If the voice does not exist, create a new one
+		if err := tx.Create(vote).Error; err != nil {
+			repo.logger.Error("Failed to create vote", zap.Error(err))
+			return nil, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+		}
+		return vote, nil
+	} else {
+		// If the voice exists, update the value
+		existingVote.Value = vote.Value
+		if err := tx.Save(&existingVote).Error; err != nil {
+			repo.logger.Error("Failed to update vote", zap.Error(err))
+			return nil, apperrors.DeletionFailedErr.AppendMessage(err.Error())
+		}
+		return &existingVote, nil
+	}
 }
