@@ -66,5 +66,11 @@ func (v *Vote) AfterSave(tx *gorm.DB) (err error) {
 		return err
 	}
 
+	// Update the UpdatedAt field for the profile
+	err = tx.Model(&User{}).Where("id = ?", v.UserID).Update("updated_at", time.Now()).Error
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -28,6 +28,7 @@ type UserServiceInterface interface {
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	Vote(ctx context.Context, vote *models.Vote) (string, error)
+	RevokeVote(ctx context.Context, userID uint, profileID uint) error
 }
 
 func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
@@ -147,4 +148,14 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string
 	}
 
 	return strconv.Itoa(int(insertedVote.ID)), nil
+}
+
+func (service *UserService) RevokeVote(ctx context.Context, userID uint, profileID uint) error {
+	// Proceed to delete the vote
+	err := service.userRepo.DeleteVote(ctx, userID, profileID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

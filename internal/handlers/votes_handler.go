@@ -80,3 +80,41 @@ func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 	createUserResponse := &CreateUserResponse{VoteId: voteId}
 	h.respond(w, createUserResponse, http.StatusCreated)
 }
+
+func (h *votesHandler) RevokeVote(w http.ResponseWriter, r *http.Request) {
+	type CreateUserResponse struct {
+		VoteId string `json:"vote_id"`
+	}
+
+	vars := mux.Vars(r)
+	profileID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		h.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	// Getting the ID of the voting user (let's say it is in the context or token)
+	userID, err := strconv.Atoi(h.GetAuthenticatedUserID(r.Context()))
+	if err != nil {
+		h.sendError(w, err, http.StatusBadRequest)
+		return
+	}
+
+	if userID == profileID {
+		err := errors.New("you cannot vote for yourself")
+		h.sendError(w, err, http.StatusForbidden)
+		return
+	}
+
+	ctx := r.Context()
+
+	// Attempting to create or update a voice
+	err = h.userService.RevokeVote(ctx, uint(userID), uint(profileID))
+	if err != nil {
+		h.sendError(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	createUserResponse := &CreateUserResponse{}
+	h.respond(w, createUserResponse, http.StatusCreated)
+}

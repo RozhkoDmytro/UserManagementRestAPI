@@ -30,6 +30,7 @@ type UserRepoInterface interface {
 	GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error)
 	CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
 	UpdateVote(ctx context.Context, vote *models.Vote) error
+	DeleteVote(ctx context.Context, userID uint, profileID uint) error
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -202,5 +203,26 @@ func (repo *UserRepo) UpdateVote(ctx context.Context, vote *models.Vote) error {
 		repo.logger.Error("Failed to update vote", zap.Error(err))
 		return err
 	}
+	return nil
+}
+
+func (repo *UserRepo) DeleteVote(ctx context.Context, userID uint, profileID uint) error {
+	tx := repo.db.WithContext(ctx)
+
+	// Find the vote
+	var vote models.Vote
+	result := tx.Where("user_id = ? AND profile_id = ?", userID, profileID).First(&vote)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return apperrors.NoRecordFoundErr.AppendMessage("Vote not found.")
+		}
+		return result.Error
+	}
+
+	// Delete the vote
+	if err := tx.Delete(&vote).Error; err != nil {
+		return apperrors.DeletionFailedErr.AppendMessage(err.Error())
+	}
+
 	return nil
 }

@@ -73,6 +73,12 @@ var (
 		Code:     "VOTE_ALREADY_EXISTS",
 		HTTPCode: 409, // HTTP 409 Conflict, as the action cannot be performed due to existing state
 	}
+
+	UnauthorizedErr = AppError{
+		Message:  "Unauthorized action",
+		Code:     "UNAUTHORIZED_ERR",
+		HTTPCode: http.StatusUnauthorized,
+	}
 )
 
 func (appError *AppError) Error() string {

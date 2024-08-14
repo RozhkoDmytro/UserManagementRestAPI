@@ -93,6 +93,22 @@ func (mr *MockUserRepoInterfaceMockRecorder) UpdateVote(ctx, vote interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVote", reflect.TypeOf((*MockUserRepoInterface)(nil).UpdateVote), ctx, vote)
 }
+
+// DeleteVote mocks base method
+func (m *MockUserRepoInterface) DeleteVote(ctx context.Context, userID uint, profileID uint) error {
+    m.ctrl.T.Helper()
+    ret := m.ctrl.Call(m, "DeleteVote", ctx, userID, profileID)
+    ret0, _ := ret[0].(error)
+    return ret0
+}
+
+// DeleteVote indicates an expected call of DeleteVote
+func (mr *MockUserRepoInterfaceMockRecorder) DeleteVote(ctx, userID, profileID interface{}) *gomock.Call {
+    mr.mock.ctrl.T.Helper()
+    return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVote", reflect.TypeOf((*MockUserRepoInterface)(nil).DeleteVote), ctx, userID, profileID)
+}
+
+
 // GetUserByID mocks base method
 func (m *MockUserRepoInterface) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
 	m.ctrl.T.Helper()

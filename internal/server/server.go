@@ -49,6 +49,7 @@ func (srv *server) initializeRoutes() {
 
 	srv.router.Post("/like/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Like))
 	srv.router.Post("/dislike/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Dislike))
+	srv.router.Delete("/revoke/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.RevokeVote))
 }
 
 func Run() {
