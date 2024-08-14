@@ -108,29 +108,38 @@ func (service *UserService) GetUserByEmail(ctx context.Context, email string) (*
 }
 
 func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string, error) {
-	// Check for an existing voice
+	// Get the user profile
+	var user models.User
+	err := service.userRepo.GetUserByID(ctx, vote.UserID, &user)
+	if err != nil {
+		service.logger.Error("Failed to get user", zap.Error(err))
+		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+	}
+
+	// Check if the user has voted within the last hour
+	if time.Since(user.UpdatedAt) < time.Hour {
+		return constants.EmptyString, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
+	}
+
+	// Check if the user has already voted for this profile
 	existingVote, err := service.userRepo.GetVote(ctx, vote.UserID, vote.ProfileID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		service.logger.Error("Failed to check existing vote", zap.Error(err))
 		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
 	}
 
-	// Check if the call has already been made within the last hour
 	if existingVote != nil {
-		if time.Since(existingVote.CreatedAt) < time.Hour {
-			return constants.EmptyString, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
-		}
-
-		// Update an existing voice
+		// Update existing vote
 		existingVote.Value = vote.Value
-		if err := service.userRepo.UpdateVote(ctx, existingVote); err != nil {
+		err = service.userRepo.UpdateVote(ctx, existingVote)
+		if err != nil {
 			service.logger.Error("Failed to update vote", zap.Error(err))
 			return constants.EmptyString, apperrors.UpdateFailedErr.AppendMessage(err.Error())
 		}
 		return strconv.Itoa(int(existingVote.ID)), nil
 	}
 
-	// Creating a new voice
+	// Create new vote
 	insertedVote, err := service.userRepo.CreateVote(ctx, vote)
 	if err != nil {
 		service.logger.Error("Failed to create vote", zap.Error(err))

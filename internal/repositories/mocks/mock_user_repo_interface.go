@@ -93,7 +93,19 @@ func (mr *MockUserRepoInterfaceMockRecorder) UpdateVote(ctx, vote interface{}) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVote", reflect.TypeOf((*MockUserRepoInterface)(nil).UpdateVote), ctx, vote)
 }
+// GetUserByID mocks base method
+func (m *MockUserRepoInterface) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID, user)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
 
+// GetUserByID indicates an expected call of GetUserByID
+func (mr *MockUserRepoInterfaceMockRecorder) GetUserByID(ctx, userID, user interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserRepoInterface)(nil).GetUserByID), ctx, userID, user)
+}
 // CreateUser mocks base method.
 func (m *MockUserRepoInterface) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
 	m.ctrl.T.Helper()

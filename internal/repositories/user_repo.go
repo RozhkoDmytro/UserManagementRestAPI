@@ -25,6 +25,7 @@ type UserRepoInterface interface {
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetUserByID(ctx context.Context, userID uint, user *models.User) error
 	GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error)
 	CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
 	UpdateVote(ctx context.Context, vote *models.Vote) error
@@ -165,6 +166,10 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 		return nil, tx.Error
 	}
 	return &user, nil
+}
+
+func (repo *UserRepo) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
+	return repo.db.WithContext(ctx).First(user, userID).Error
 }
 
 func (repo *UserRepo) GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error) {

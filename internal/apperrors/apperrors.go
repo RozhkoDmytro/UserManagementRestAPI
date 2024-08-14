@@ -67,6 +67,12 @@ var (
 		Code:     "UPDATE_FAILED_ERR",
 		HTTPCode: http.StatusInternalServerError,
 	}
+
+	VoteAlreadyExistsErr = AppError{
+		Message:  "You have already voted for this profile",
+		Code:     "VOTE_ALREADY_EXISTS",
+		HTTPCode: 409, // HTTP 409 Conflict, as the action cannot be performed due to existing state
+	}
 )
 
 func (appError *AppError) Error() string {
