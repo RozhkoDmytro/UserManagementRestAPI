@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
@@ -169,7 +170,14 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 }
 
 func (repo *UserRepo) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
-	return repo.db.WithContext(ctx).First(user, userID).Error
+	result := repo.db.WithContext(ctx).First(user, userID)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return apperrors.NoRecordFoundErr.AppendMessage("User not found.")
+		}
+		return result.Error
+	}
+	return nil
 }
 
 func (repo *UserRepo) GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error) {
