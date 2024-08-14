@@ -50,19 +50,48 @@ func (mr *MockUserRepoInterfaceMockRecorder) CountUsers(ctx interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUsers", reflect.TypeOf((*MockUserRepoInterface)(nil).CountUsers), ctx)
 }
 
-// CreateUser mocks base method.
-func (m *MockUserRepoInterface) Vote(ctx context.Context, user *models.Vote) (*models.Vote, error) {
+// GetVote mocks base method.
+func (m *MockUserRepoInterface) GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Vote", ctx, user)
+	ret := m.ctrl.Call(m, "GetVote", ctx, userID, profileID)
 	ret0, _ := ret[0].(*models.Vote)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// CreateUser indicates an expected call of CreateUser.
-func (mr *MockUserRepoInterfaceMockRecorder) Vote(ctx, user interface{}) *gomock.Call {
+// GetVote indicates an expected call of GetVote.
+func (mr *MockUserRepoInterfaceMockRecorder) GetVote(ctx, userID, profileID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Vote", reflect.TypeOf((*MockUserRepoInterface)(nil).Vote), ctx, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVote", reflect.TypeOf((*MockUserRepoInterface)(nil).GetVote), ctx, userID, profileID)
+}
+
+// CreateVote mocks base method.
+func (m *MockUserRepoInterface) CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateVote", ctx, vote)
+	ret0, _ := ret[0].(*models.Vote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateVote indicates an expected call of CreateVote.
+func (mr *MockUserRepoInterfaceMockRecorder) CreateVote(ctx, vote interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVote", reflect.TypeOf((*MockUserRepoInterface)(nil).CreateVote), ctx, vote)
+}
+
+// UpdateVote mocks base method.
+func (m *MockUserRepoInterface) UpdateVote(ctx context.Context, vote *models.Vote) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateVote", ctx, vote)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateVote indicates an expected call of UpdateVote.
+func (mr *MockUserRepoInterfaceMockRecorder) UpdateVote(ctx, vote interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVote", reflect.TypeOf((*MockUserRepoInterface)(nil).UpdateVote), ctx, vote)
 }
 
 // CreateUser mocks base method.

@@ -25,7 +25,9 @@ type UserRepoInterface interface {
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	Vote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
+	GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error)
+	CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
+	UpdateVote(ctx context.Context, vote *models.Vote) error
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {
@@ -165,36 +167,27 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
-func (repo *UserRepo) Vote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
-	tx := repo.db.WithContext(ctx)
-
-	var existingVote models.Vote
-	result := tx.Where("user_id = ? AND profile_id = ?", vote.UserID, vote.ProfileID).First(&existingVote)
-
-	if result.Error != nil && result.Error != gorm.ErrRecordNotFound {
-		repo.logger.Error("Failed to check existing vote", zap.Error(result.Error))
-		return nil, apperrors.InsertionFailedErr.AppendMessage(result.Error.Error())
+func (repo *UserRepo) GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error) {
+	var vote models.Vote
+	result := repo.db.WithContext(ctx).Where("user_id = ? AND profile_id = ?", userID, profileID).First(&vote)
+	if result.Error != nil {
+		return nil, result.Error
 	}
+	return &vote, nil
+}
 
-	// Check if the user has voted for this profile within the last hour
-	if result.RowsAffected > 0 {
-		if time.Since(existingVote.CreatedAt) < time.Hour {
-			return nil, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
-		}
-
-		// Update existing vote
-		existingVote.Value = vote.Value
-		if err := tx.Save(&existingVote).Error; err != nil {
-			repo.logger.Error("Failed to update vote", zap.Error(err))
-			return nil, apperrors.UpdateFailedErr.AppendMessage(err.Error())
-		}
-		return &existingVote, nil
-	}
-
-	// Create new vote
-	if err := tx.Create(vote).Error; err != nil {
+func (repo *UserRepo) CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
+	if err := repo.db.WithContext(ctx).Create(vote).Error; err != nil {
 		repo.logger.Error("Failed to create vote", zap.Error(err))
-		return nil, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+		return nil, err
 	}
 	return vote, nil
+}
+
+func (repo *UserRepo) UpdateVote(ctx context.Context, vote *models.Vote) error {
+	if err := repo.db.WithContext(ctx).Save(vote).Error; err != nil {
+		repo.logger.Error("Failed to update vote", zap.Error(err))
+		return err
+	}
+	return nil
 }

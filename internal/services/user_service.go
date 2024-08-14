@@ -3,9 +3,12 @@ package services
 import (
 	"context"
 	"strconv"
+	"time"
 
+	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
 	"gitlab.com/jkozhemiaka/web-layout/internal/constants"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
+	"gorm.io/gorm"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"go.uber.org/zap"
@@ -105,10 +108,33 @@ func (service *UserService) GetUserByEmail(ctx context.Context, email string) (*
 }
 
 func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string, error) {
-	insertedVote, err := service.userRepo.Vote(ctx, vote)
+	// Check for an existing voice
+	existingVote, err := service.userRepo.GetVote(ctx, vote.UserID, vote.ProfileID)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		service.logger.Error("Failed to check existing vote", zap.Error(err))
+		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+	}
+
+	// Check if the call has already been made within the last hour
+	if existingVote != nil {
+		if time.Since(existingVote.CreatedAt) < time.Hour {
+			return constants.EmptyString, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
+		}
+
+		// Update an existing voice
+		existingVote.Value = vote.Value
+		if err := service.userRepo.UpdateVote(ctx, existingVote); err != nil {
+			service.logger.Error("Failed to update vote", zap.Error(err))
+			return constants.EmptyString, apperrors.UpdateFailedErr.AppendMessage(err.Error())
+		}
+		return strconv.Itoa(int(existingVote.ID)), nil
+	}
+
+	// Creating a new voice
+	insertedVote, err := service.userRepo.CreateVote(ctx, vote)
 	if err != nil {
-		service.logger.Error(err)
-		return constants.EmptyString, err
+		service.logger.Error("Failed to create vote", zap.Error(err))
+		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
 	}
 
 	return strconv.Itoa(int(insertedVote.ID)), nil
