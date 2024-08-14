@@ -81,11 +81,12 @@ func (mr *MockUserRepoInterfaceMockRecorder) CreateVote(ctx, vote interface{}) *
 }
 
 // UpdateVote mocks base method.
-func (m *MockUserRepoInterface) UpdateVote(ctx context.Context, vote *models.Vote) error {
+func (m *MockUserRepoInterface) UpdateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateVote", ctx, vote)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(*models.Vote)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // UpdateVote indicates an expected call of UpdateVote.
@@ -109,19 +110,23 @@ func (mr *MockUserRepoInterfaceMockRecorder) DeleteVote(ctx, userID, profileID i
 }
 
 
-// GetUserByID mocks base method
-func (m *MockUserRepoInterface) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
+// GetUserByID mocks base method.
+func (m *MockUserRepoInterface) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID, user)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID)
+	
+	ret0, _ := ret[0].(*models.User)
+	ret1, _ := ret[1].(error)
+	
+	return ret0, ret1
 }
 
-// GetUserByID indicates an expected call of GetUserByID
-func (mr *MockUserRepoInterfaceMockRecorder) GetUserByID(ctx, userID, user interface{}) *gomock.Call {
+// GetUserByID indicates an expected call of GetUserByID.
+func (mr *MockUserRepoInterfaceMockRecorder) GetUserByID(ctx, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserRepoInterface)(nil).GetUserByID), ctx, userID, user)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByID", reflect.TypeOf((*MockUserRepoInterface)(nil).GetUserByID), ctx, userID)
 }
+
 // CreateUser mocks base method.
 func (m *MockUserRepoInterface) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
 	m.ctrl.T.Helper()

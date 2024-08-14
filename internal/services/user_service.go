@@ -110,8 +110,8 @@ func (service *UserService) GetUserByEmail(ctx context.Context, email string) (*
 
 func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string, error) {
 	// Get the user profile
-	var user models.User
-	err := service.userRepo.GetUserByID(ctx, vote.UserID, &user)
+	var user *models.User
+	user, err := service.userRepo.GetUserByID(ctx, vote.UserID)
 	if err != nil {
 		service.logger.Error("Failed to get user", zap.Error(err))
 		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
@@ -119,7 +119,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string
 
 	// Check if the user has voted within the last hour
 	if time.Since(user.UpdatedAt) < time.Hour {
-		return constants.EmptyString, apperrors.VoteCooldownErr.AppendMessage("You can only vote once per hour.")
+		return constants.EmptyString, &apperrors.VoteCooldownErr
 	}
 
 	// Check if the user has already voted for this profile
@@ -132,7 +132,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string
 	if existingVote != nil {
 		// Update existing vote
 		existingVote.Value = vote.Value
-		err = service.userRepo.UpdateVote(ctx, existingVote)
+		_, err = service.userRepo.UpdateVote(ctx, existingVote)
 		if err != nil {
 			service.logger.Error("Failed to update vote", zap.Error(err))
 			return constants.EmptyString, apperrors.UpdateFailedErr.AppendMessage(err.Error())

@@ -26,10 +26,10 @@ type UserRepoInterface interface {
 	ListUsers(ctx context.Context, page int, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	GetUserByID(ctx context.Context, userID uint, user *models.User) error
+	GetUserByID(ctx context.Context, userID uint) (*models.User, error)
 	GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error)
 	CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
-	UpdateVote(ctx context.Context, vote *models.Vote) error
+	UpdateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
 	DeleteVote(ctx context.Context, userID uint, profileID uint) error
 }
 
@@ -170,15 +170,16 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, email string) (*models
 	return &user, nil
 }
 
-func (repo *UserRepo) GetUserByID(ctx context.Context, userID uint, user *models.User) error {
-	result := repo.db.WithContext(ctx).First(user, userID)
+func (repo *UserRepo) GetUserByID(ctx context.Context, userID uint) (*models.User, error) {
+	var user models.User
+	result := repo.db.WithContext(ctx).First(&user, userID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return apperrors.NoRecordFoundErr.AppendMessage("User not found.")
+			return nil, apperrors.NoRecordFoundErr.AppendMessage("User not found.")
 		}
-		return result.Error
+		return nil, result.Error
 	}
-	return nil
+	return &user, nil
 }
 
 func (repo *UserRepo) GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error) {
@@ -198,12 +199,12 @@ func (repo *UserRepo) CreateVote(ctx context.Context, vote *models.Vote) (*model
 	return vote, nil
 }
 
-func (repo *UserRepo) UpdateVote(ctx context.Context, vote *models.Vote) error {
+func (repo *UserRepo) UpdateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error) {
 	if err := repo.db.WithContext(ctx).Save(vote).Error; err != nil {
 		repo.logger.Error("Failed to update vote", zap.Error(err))
-		return err
+		return nil, err
 	}
-	return nil
+	return vote, nil
 }
 
 func (repo *UserRepo) DeleteVote(ctx context.Context, userID uint, profileID uint) error {
