@@ -77,7 +77,7 @@ func (h *votesHandler) vote(w http.ResponseWriter, r *http.Request, value int) {
 		return
 	}
 
-	createUserResponse := &CreateUserResponse{VoteId: voteId}
+	createUserResponse := &CreateUserResponse{VoteId: strconv.Itoa(int(voteId))}
 	h.respond(w, createUserResponse, http.StatusCreated)
 }
 

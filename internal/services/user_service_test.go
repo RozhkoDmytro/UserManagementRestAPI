@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
-	"gitlab.com/jkozhemiaka/web-layout/internal/constants"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	mocks "gitlab.com/jkozhemiaka/web-layout/internal/repositories/mocks"
 
@@ -30,7 +29,7 @@ func TestUserService_CreateUser(t *testing.T) {
 
 	userId, err := userService.CreateUser(context.Background(), testUser)
 	assert.NoError(t, err)
-	assert.NotEqual(t, constants.EmptyString, userId)
+	assert.NotEqual(t, "", userId)
 }
 
 func TestUserService_GetUser(t *testing.T) {
@@ -216,7 +215,7 @@ func TestUserService_Vote_GetUserError(t *testing.T) {
 	voteID, err := userService.Vote(context.Background(), testVote)
 	assert.Error(t, err)
 	assert.Equal(t, apperrors.InsertionFailedErr.Code, err.(*apperrors.AppError).Code)
-	assert.Equal(t, constants.EmptyString, voteID)
+	assert.Equal(t, "", voteID)
 }
 
 func TestUserService_RevokeVote_Success(t *testing.T) {

@@ -6,7 +6,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
-	"gitlab.com/jkozhemiaka/web-layout/internal/constants"
 )
 
 type Config struct {
@@ -17,7 +16,7 @@ type Config struct {
 
 func NewConfig() (*Config, error) {
 	configPath := os.Getenv("CONFIG_PATH")
-	if configPath == constants.EmptyString {
+	if configPath == "" {
 		return nil, apperrors.EnvConfigVarError.AppendMessage("please set CONFIG_PATH")
 	}
 

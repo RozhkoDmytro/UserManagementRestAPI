@@ -2,11 +2,9 @@ package services
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
-	"gitlab.com/jkozhemiaka/web-layout/internal/constants"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gorm.io/gorm"
 
@@ -20,14 +18,14 @@ type UserService struct {
 }
 
 type UserServiceInterface interface {
-	CreateUser(ctx context.Context, user *models.User) (string, error)
+	CreateUser(ctx context.Context, user *models.User) (uint, error)
 	DeleteUser(ctx context.Context, userID string) (*models.User, error)
 	GetUser(ctx context.Context, userID string) (*models.User, error)
 	UpdateUser(ctx context.Context, userID string, user *models.User) (*models.User, error)
 	ListUsers(ctx context.Context, page, pageSize int) ([]models.User, error)
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	Vote(ctx context.Context, vote *models.Vote) (string, error)
+	Vote(ctx context.Context, vote *models.Vote) (uint, error)
 	RevokeVote(ctx context.Context, userID uint, profileID uint) error
 }
 
@@ -38,14 +36,14 @@ func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.Sugared
 	}
 }
 
-func (service *UserService) CreateUser(ctx context.Context, user *models.User) (userId string, err error) {
+func (service *UserService) CreateUser(ctx context.Context, user *models.User) (userId uint, err error) {
 	insertedUser, err := service.userRepo.CreateUser(ctx, user)
 	if err != nil {
 		service.logger.Error(err)
-		return constants.EmptyString, err
+		return 0, err
 	}
 
-	return strconv.Itoa(int(insertedUser.ID)), nil
+	return insertedUser.ID, nil
 }
 
 func (service *UserService) GetUser(ctx context.Context, userID string) (user *models.User, err error) {
@@ -108,25 +106,25 @@ func (service *UserService) GetUserByEmail(ctx context.Context, email string) (*
 	return user, nil
 }
 
-func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string, error) {
+func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, error) {
 	// Get the user profile
 	var user *models.User
 	user, err := service.userRepo.GetUserByID(ctx, vote.UserID)
 	if err != nil {
 		service.logger.Error("Failed to get user", zap.Error(err))
-		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+		return 0, apperrors.InsertionFailedErr.AppendMessage(err.Error())
 	}
 
 	// Check if the user has voted within the last hour
 	if time.Since(user.UpdatedAt) < time.Hour {
-		return constants.EmptyString, &apperrors.VoteCooldownErr
+		return 0, &apperrors.VoteCooldownErr
 	}
 
 	// Check if the user has already voted for this profile
 	existingVote, err := service.userRepo.GetVote(ctx, vote.UserID, vote.ProfileID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		service.logger.Error("Failed to check existing vote", zap.Error(err))
-		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+		return 0, apperrors.InsertionFailedErr.AppendMessage(err.Error())
 	}
 
 	if existingVote != nil {
@@ -135,19 +133,19 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (string
 		_, err = service.userRepo.UpdateVote(ctx, existingVote)
 		if err != nil {
 			service.logger.Error("Failed to update vote", zap.Error(err))
-			return constants.EmptyString, apperrors.UpdateFailedErr.AppendMessage(err.Error())
+			return 0, apperrors.UpdateFailedErr.AppendMessage(err.Error())
 		}
-		return strconv.Itoa(int(existingVote.ID)), nil
+		return existingVote.ID, nil
 	}
 
 	// Create new vote
 	insertedVote, err := service.userRepo.CreateVote(ctx, vote)
 	if err != nil {
 		service.logger.Error("Failed to create vote", zap.Error(err))
-		return constants.EmptyString, apperrors.InsertionFailedErr.AppendMessage(err.Error())
+		return 0, apperrors.InsertionFailedErr.AppendMessage(err.Error())
 	}
 
-	return strconv.Itoa(int(insertedVote.ID)), nil
+	return insertedVote.ID, nil
 }
 
 func (service *UserService) RevokeVote(ctx context.Context, userID uint, profileID uint) error {

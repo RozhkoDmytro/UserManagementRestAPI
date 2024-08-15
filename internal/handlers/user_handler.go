@@ -90,7 +90,7 @@ func (h *userHandler) CreateUserHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	createUserResponse := &CreateUserResponse{UserId: userId}
+	createUserResponse := &CreateUserResponse{UserId: strconv.Itoa(int(userId))}
 	h.respond(w, createUserResponse, http.StatusCreated)
 }
 
