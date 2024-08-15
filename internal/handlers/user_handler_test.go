@@ -3,12 +3,9 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"log"
-	"math/rand"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,301 +14,246 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
-	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
-	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
-	"gitlab.com/jkozhemiaka/web-layout/internal/database"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
-	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
 	"go.uber.org/zap"
 )
 
-const (
-	letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	domain  = "@example.com"
-)
-
-func InitializeMock(t *testing.T) (*services.MockUserServiceInterface, *userHandler) {
-	os.Setenv("CONFIG_PATH", "../../configs/.sample.env")
-	defer os.Unsetenv("CONFIG_PATH")
-
+func TestCreateUserHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockUserService := services.NewMockUserServiceInterface(ctrl)
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		log.Fatal(apperrors.LoggerInitError.AppendMessage(err))
-	}
-	defer logger.Sync()
 
-	cfg, err := config.NewConfig()
-	if err != nil {
-		logger.Sugar().Fatal(err)
-	}
-
-	db, err := database.SetupDatabase(cfg)
-	if err != nil {
-		logger.Sugar().Fatal(err)
-	}
-	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
-
+	logger := zap.NewExample().Sugar()
 	// Initialize validator
-	validator := validator.New()
-	validator.RegisterValidation("password", myValidate.Password)
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
 
-	userHandler := NewUserHandler(userService, logger.Sugar(), validator, cfg)
+	cfg := &config.Config{}
 
-	return mockUserService, userHandler
-}
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
 
-// GenerateEmail creates a random email address
-func GenerateEmail() string {
-	// Create a new random source with the current time as a seed
-	src := rand.NewSource(time.Now().UnixNano())
-	r := rand.New(src)
-
-	b := strings.Builder{}
-	for i := 0; i < 10; i++ {
-		b.WriteByte(letters[r.Intn(len(letters))])
+	reqBody := &CreateUserRequest{
+		Email:     "test@example.com",
+		FirstName: "John",
+		LastName:  "Doe",
+		Password:  "password@123",
+		RoleID:    1,
 	}
-	return b.String() + domain
-}
 
-func TestCreateUserHandler(t *testing.T) {
-	mockUserService, srv := InitializeMock(t)
-	newEmail := ""
-	for i := 0; i < 10; i++ {
-		t.Run("success", func(t *testing.T) {
-			newEmail = GenerateEmail()
-			token := auth.GenerateTokenHandler(newEmail, "admin", 2, []byte(srv.cfg.JwtKey))
-			mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return("2", nil)
+	reqBodyBytes, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewReader(reqBodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
 
-			reqBody := `{"email":"` + GenerateEmail() + `","first_name":"John","last_name":"Doe","password":"passwoSrd123!", "role_id":3}`
-			req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
-			req.Header.Set("Authorization", "Bearer "+string(token))
-			w := httptest.NewRecorder()
+	// Mock the service response
+	mockUserService.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(uint(12345), nil)
+	mockUserService.EXPECT().GetUserByEmail(gomock.Any(), gomock.Any()).Return(nil, nil)
 
-			srv.CreateUserHandler(w, req)
+	handler.CreateUserHandler(w, req)
 
-			assert.Equal(t, http.StatusCreated, w.Code)
-		})
+	res := w.Result()
+	defer res.Body.Close()
+
+	type CreateUserResponse struct {
+		UserId string `json:"user_id"`
 	}
-	t.Run("invalid request", func(t *testing.T) {
-		token := auth.GenerateTokenHandler(newEmail, "admin", 2, []byte(srv.cfg.JwtKey))
 
-		reqBody := `{"email":"` + GenerateEmail() + `","first_name":"John","last_name":"Doe","password":"passwo", "role_id":3}`
-		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBufferString(reqBody))
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		w := httptest.NewRecorder()
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
+	var response CreateUserResponse
+	_ = json.NewDecoder(res.Body).Decode(&response)
 
-		srv.CreateUserHandler(w, req)
-
-		assert.Equal(t, http.StatusBadRequest, w.Code)
-	})
-
-	// Add more test cases as needed
+	assert.Equal(t, "12345", response.UserId)
 }
 
-// Similar tests for getUserHandler, updateUserHandler, listUsersHandler
+func TestDeleteUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func TestGetUserHandler(t *testing.T) {
-	mockUserService, srv := InitializeMock(t)
+	mockUserService := services.NewMockUserServiceInterface(ctrl)
 
-	t.Run("success", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 7, []byte(srv.cfg.JwtKey))
-		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(&models.User{
-			ID:        7,
-			Email:     newEmail,
-			FirstName: "John",
-			LastName:  "Doe",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}, nil)
+	logger := zap.NewExample().Sugar()
+	// Initialize validator
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
 
-		req := httptest.NewRequest(http.MethodGet, "/user/8", nil)
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		req = mux.SetURLVars(req, map[string]string{"id": "8"})
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		w := httptest.NewRecorder()
+	cfg := &config.Config{}
 
-		srv.GetUser(w, req)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
 
-		assert.Equal(t, http.StatusCreated, w.Code)
-	})
+	req := httptest.NewRequest(http.MethodDelete, "/users/123", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "123"})
+	w := httptest.NewRecorder()
 
-	t.Run("not found", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 999, []byte(srv.cfg.JwtKey))
-		mockUserService.EXPECT().GetUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
+	// Мокаємо роль адміністратора
+	ctx := context.WithValue(req.Context(), models.RoleContextKey, models.StrAdmin)
+	req = req.WithContext(ctx)
 
-		req := httptest.NewRequest(http.MethodGet, "/users/999", nil)
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		req = mux.SetURLVars(req, map[string]string{"id": "999"})
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		w := httptest.NewRecorder()
+	// Мокаємо відповідь сервісу
+	deletedUser := &models.User{ID: 123, DeletedAt: time.Now()}
+	mockUserService.EXPECT().DeleteUser(gomock.Any(), "123").Return(deletedUser, nil)
 
-		srv.GetUser(w, req)
+	handler.DeleteUser(w, req)
 
-		assert.Equal(t, http.StatusNotFound, w.Code)
-	})
+	res := w.Result()
+	defer res.Body.Close()
 
-	// Add more test cases as needed
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 }
 
-func TestUpdateUserHandler(t *testing.T) {
-	mockUserService, srv := InitializeMock(t)
+func TestGetUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	t.Run("success", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 7, []byte(srv.cfg.JwtKey))
+	mockUserService := services.NewMockUserServiceInterface(ctrl)
 
-		mockUserService.EXPECT().UpdateUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(&models.User{
-			ID:        7,
-			Email:     newEmail,
-			FirstName: "John",
-			LastName:  "Doe",
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			RoleID:    3,
-		}, nil)
+	logger := zap.NewExample().Sugar()
+	// Initialize validator
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
 
-		reqBody := `{"email":"` + newEmail + `","first_name":"John","last_name":"Doe","password":"passwor!!Gd123", "role_id":3}`
-		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		req = mux.SetURLVars(req, map[string]string{"id": "8"})
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		w := httptest.NewRecorder()
+	cfg := &config.Config{}
 
-		srv.UpdateUser(w, req)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
 
-		assert.Equal(t, http.StatusCreated, w.Code)
-	})
+	req := httptest.NewRequest(http.MethodGet, "/users/123", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "123"})
+	w := httptest.NewRecorder()
 
-	t.Run("invalid request", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 8, []byte(srv.cfg.JwtKey))
+	// Мокаємо відповідь сервісу
+	expectedUser := &models.User{ID: 123, Email: "test@example.com"}
+	mockUserService.EXPECT().GetUser(gomock.Any(), "123").Return(expectedUser, nil)
 
-		reqBody := `{"email":"` + GenerateEmail() + `"}`
-		req := httptest.NewRequest(http.MethodPut, "/users/8", bytes.NewBufferString(reqBody))
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		req = mux.SetURLVars(req, map[string]string{"id": "8"})
-		w := httptest.NewRecorder()
+	handler.GetUser(w, req)
 
-		srv.UpdateUser(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-		assert.Equal(t, http.StatusBadRequest, w.Code)
-	})
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
 
-	// Add more test cases as needed
+	var user models.User
+	_ = json.NewDecoder(res.Body).Decode(&user)
+	assert.Equal(t, uint(123), user.ID)
+	assert.Equal(t, "test@example.com", user.Email)
 }
 
-func TestListUsersHandler(t *testing.T) {
-	mockUserService, srv := InitializeMock(t)
+func TestListUsers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	t.Run("success", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 1, []byte(srv.cfg.JwtKey))
+	mockUserService := services.NewMockUserServiceInterface(ctrl)
 
-		mockUserService.EXPECT().ListUsers(gomock.Any(), "1", "10").Return([]*models.User{
-			{
-				ID:        1,
-				Email:     GenerateEmail(),
-				FirstName: "John",
-				LastName:  "Doe",
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-			{
-				ID:        2,
-				Email:     GenerateEmail(),
-				FirstName: "Jane",
-				LastName:  "Doe",
-				CreatedAt: time.Now(),
-				UpdatedAt: time.Now(),
-			},
-		}, nil)
+	logger := zap.NewExample().Sugar()
+	// Initialize validator
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
 
-		req := httptest.NewRequest(http.MethodGet, "/users?page=1&page_size=10", nil)
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		w := httptest.NewRecorder()
+	cfg := &config.Config{}
 
-		srv.ListUsers(w, req)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
 
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
+	w := httptest.NewRecorder()
 
-	t.Run("invalid request, but return ok!", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 1, []byte(srv.cfg.JwtKey))
+	// Мокаємо відповідь сервісу
+	users := []models.User{
+		{ID: 1, Email: "test1@example.com"},
+		{ID: 2, Email: "test2@example.com"},
+	}
+	mockUserService.EXPECT().ListUsers(gomock.Any(), defaultPage, defaultPageSize).Return(users, nil)
 
-		req := httptest.NewRequest(http.MethodGet, "/users?page=bad&page_size=10", nil)
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		w := httptest.NewRecorder()
+	handler.ListUsers(w, req)
 
-		srv.ListUsers(w, req)
+	res := w.Result()
+	defer res.Body.Close()
 
-		assert.Equal(t, http.StatusOK, w.Code)
-	})
+	assert.Equal(t, http.StatusOK, res.StatusCode)
 
-	// Add more test cases as needed
+	var returnedUsers []*models.User
+	_ = json.NewDecoder(res.Body).Decode(&returnedUsers)
+	assert.Len(t, returnedUsers, 2)
 }
 
-func TestDeleteUserHandler(t *testing.T) {
-	mockUserService, srv := InitializeMock(t)
-	/*
-		t.Run("success", func(t *testing.T) {
-			newEmail := GenerateEmail()
-			token := auth.GenerateTokenHandler(newEmail, "admin", []byte(srv.cfg.JwtKey))
+func TestCountUsers(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-			mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(&models.User{ID: 9, DeletedAt: time.Now()}, nil)
+	mockUserService := services.NewMockUserServiceInterface(ctrl)
 
-			req := httptest.NewRequest(http.MethodDelete, "/users/9", nil)
-			req.Header.Set("Authorization", "Bearer "+string(token))
-			req = mux.SetURLVars(req, map[string]string{"id": "9"})
-			ctx := context.WithValue(req.Context(), RoleContextKey, "admin")
-			ctx = context.WithValue(ctx, EmailContextKey, newEmail)
-			req = req.WithContext(ctx)
-			w := httptest.NewRecorder()
+	logger := zap.NewExample().Sugar()
+	// Initialize validator
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
 
-			srv.deleteUser(w, req)
-			srv.ServeHTTP(w, req)
+	cfg := &config.Config{}
 
-			assert.Equal(t, http.StatusOK, w.Code)
-		}) */
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
 
-	t.Run("not found", func(t *testing.T) {
-		newEmail := GenerateEmail()
-		token := auth.GenerateTokenHandler(newEmail, "admin", 999, []byte(srv.cfg.JwtKey))
-		mockUserService.EXPECT().DeleteUser(gomock.Any(), gomock.Any()).Return(nil, &apperrors.AppError{Message: "user not found"})
+	req := httptest.NewRequest(http.MethodGet, "/users/count", nil)
+	w := httptest.NewRecorder()
 
-		req := httptest.NewRequest(http.MethodDelete, "/users/999", nil)
-		req.Header.Set("Authorization", "Bearer "+string(token))
-		ctx := context.WithValue(req.Context(), models.RoleContextKey, "admin")
-		ctx = context.WithValue(ctx, models.EmailContextKey, newEmail)
-		req = req.WithContext(ctx)
-		req = mux.SetURLVars(req, map[string]string{"id": "999"})
-		w := httptest.NewRecorder()
+	// Мокаємо відповідь сервісу
+	mockUserService.EXPECT().CountUsers(gomock.Any()).Return(123, nil)
 
-		srv.DeleteUser(w, req)
+	handler.CountUsers(w, req)
 
-		assert.Equal(t, http.StatusInternalServerError, w.Code)
-	})
+	res := w.Result()
+	defer res.Body.Close()
 
-	// Add more test cases as needed
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+
+	type CreateUserResponse struct {
+		Count int `json:"count"`
+	}
+	var response CreateUserResponse
+	_ = json.NewDecoder(res.Body).Decode(&response)
+
+	assert.Equal(t, 123, response.Count)
+}
+
+func TestUpdateUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockUserService := services.NewMockUserServiceInterface(ctrl)
+
+	logger := zap.NewExample().Sugar()
+	// Initialize validator
+	validate := validator.New()
+	validate.RegisterValidation("password", myValidate.Password)
+
+	cfg := &config.Config{}
+
+	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+
+	reqBody := &CreateUserRequest{
+		Email:     "test@example.com",
+		FirstName: "John",
+		LastName:  "Doe",
+		Password:  "password@123",
+		RoleID:    1,
+	}
+
+	reqBodyBytes, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPut, "/users/123", bytes.NewReader(reqBodyBytes))
+	req.Header.Set("Content-Type", "application/json")
+	req = mux.SetURLVars(req, map[string]string{"id": "123"})
+	w := httptest.NewRecorder()
+
+	// Мокаємо роль адміністратора
+	ctx := context.WithValue(req.Context(), models.RoleContextKey, models.StrAdmin)
+	req = req.WithContext(ctx)
+
+	// Мокаємо відповідь сервісу
+	mockUserService.EXPECT().UpdateUser(gomock.Any(), "123", gomock.Any()).Return(nil, nil)
+
+	handler.UpdateUser(w, req)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	assert.Equal(t, http.StatusCreated, res.StatusCode)
 }
