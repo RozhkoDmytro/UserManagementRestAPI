@@ -88,11 +88,11 @@ func TestDeleteUser(t *testing.T) {
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
 	w := httptest.NewRecorder()
 
-	// Мокаємо роль адміністратора
+	// Mock the role
 	ctx := context.WithValue(req.Context(), models.RoleContextKey, models.StrAdmin)
 	req = req.WithContext(ctx)
 
-	// Мокаємо відповідь сервісу
+	// Mock the service response
 	deletedUser := &models.User{ID: 123, DeletedAt: time.Now()}
 	mockUserService.EXPECT().DeleteUser(gomock.Any(), "123").Return(deletedUser, nil)
 
@@ -123,7 +123,7 @@ func TestGetUser(t *testing.T) {
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
 	w := httptest.NewRecorder()
 
-	// Мокаємо відповідь сервісу
+	// Mock the service response
 	expectedUser := &models.User{ID: 123, Email: "test@example.com"}
 	mockUserService.EXPECT().GetUser(gomock.Any(), "123").Return(expectedUser, nil)
 
@@ -158,7 +158,7 @@ func TestListUsers(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	w := httptest.NewRecorder()
 
-	// Мокаємо відповідь сервісу
+	// Mock the service response
 	users := []models.User{
 		{ID: 1, Email: "test1@example.com"},
 		{ID: 2, Email: "test2@example.com"},
@@ -195,7 +195,7 @@ func TestCountUsers(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/users/count", nil)
 	w := httptest.NewRecorder()
 
-	// Мокаємо відповідь сервісу
+	// Mock the service response
 	mockUserService.EXPECT().CountUsers(gomock.Any()).Return(123, nil)
 
 	handler.CountUsers(w, req)
@@ -243,11 +243,11 @@ func TestUpdateUser(t *testing.T) {
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
 	w := httptest.NewRecorder()
 
-	// Мокаємо роль адміністратора
+	// Mock the administrator role
 	ctx := context.WithValue(req.Context(), models.RoleContextKey, models.StrAdmin)
 	req = req.WithContext(ctx)
 
-	// Мокаємо відповідь сервісу
+	// Mock the service response
 	mockUserService.EXPECT().UpdateUser(gomock.Any(), "123", gomock.Any()).Return(nil, nil)
 
 	handler.UpdateUser(w, req)
