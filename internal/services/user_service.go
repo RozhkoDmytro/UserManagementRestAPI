@@ -116,7 +116,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, 
 	}
 
 	// Check if the user has voted within the last hour
-	if time.Since(user.UpdatedAt) < time.Hour {
+	if time.Since(user.VoteUpdatedAt) < time.Hour {
 		return 0, &apperrors.VoteCooldownErr
 	}
 

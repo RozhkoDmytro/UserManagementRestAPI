@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"strconv"
 	"testing"
 	"time"
 
@@ -143,7 +142,7 @@ func TestUserService_Vote(t *testing.T) {
 	userService := NewUserService(mockRepo, mockLogger)
 
 	testVote := &models.Vote{UserID: 1, ProfileID: 2, Value: 1}
-	testUser := &models.User{ID: 1, UpdatedAt: time.Now().Add(-2 * time.Hour)}
+	testUser := &models.User{ID: 1, VoteUpdatedAt: time.Now().Add(-2 * time.Hour)}
 
 	// Return the user and nil for error
 	mockRepo.EXPECT().GetUserByID(gomock.Any(), testVote.UserID).Return(testUser, nil)
@@ -152,7 +151,7 @@ func TestUserService_Vote(t *testing.T) {
 
 	voteID, err := userService.Vote(context.Background(), testVote)
 	assert.NoError(t, err)
-	assert.Equal(t, strconv.Itoa(int(testVote.ID)), voteID)
+	assert.Equal(t, testVote.ID, voteID)
 }
 
 func TestUserService_Vote_CooldownError(t *testing.T) {
@@ -164,7 +163,7 @@ func TestUserService_Vote_CooldownError(t *testing.T) {
 	userService := NewUserService(mockRepo, mockLogger)
 
 	testVote := &models.Vote{UserID: 1, ProfileID: 2, Value: 1}
-	testUser := &models.User{ID: 1, UpdatedAt: time.Now().Add(-30 * time.Minute)} // Time within cooldown period
+	testUser := &models.User{ID: 1, VoteUpdatedAt: time.Now().Add(-30 * time.Minute)} // Time within cooldown period
 
 	// Set expectations
 	mockRepo.EXPECT().GetUserByID(gomock.Any(), testVote.UserID).Return(testUser, nil)
@@ -187,7 +186,7 @@ func TestUserService_Vote_UpdateSuccess(t *testing.T) {
 
 	testVote := &models.Vote{UserID: 1, ProfileID: 2, Value: 1}
 	existingVote := &models.Vote{ID: 10, UserID: 1, ProfileID: 2, Value: 0}
-	testUser := &models.User{ID: 1, UpdatedAt: time.Now().Add(-2 * time.Hour)} // Time outside cooldown period
+	testUser := &models.User{ID: 1, VoteUpdatedAt: time.Now().Add(-2 * time.Hour)} // Time outside cooldown period
 
 	// Set expectations
 	mockRepo.EXPECT().GetUserByID(gomock.Any(), testVote.UserID).Return(testUser, nil)
@@ -196,7 +195,7 @@ func TestUserService_Vote_UpdateSuccess(t *testing.T) {
 
 	voteID, err := userService.Vote(context.Background(), testVote)
 	assert.NoError(t, err)
-	assert.Equal(t, strconv.Itoa(int(existingVote.ID)), voteID)
+	assert.Equal(t, existingVote.ID, voteID)
 }
 
 func TestUserService_Vote_GetUserError(t *testing.T) {
@@ -215,7 +214,7 @@ func TestUserService_Vote_GetUserError(t *testing.T) {
 	voteID, err := userService.Vote(context.Background(), testVote)
 	assert.Error(t, err)
 	assert.Equal(t, apperrors.InsertionFailedErr.Code, err.(*apperrors.AppError).Code)
-	assert.Equal(t, "", voteID)
+	assert.Equal(t, uint(0), voteID)
 }
 
 func TestUserService_RevokeVote_Success(t *testing.T) {
