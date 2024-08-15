@@ -1,6 +1,6 @@
 package handlers
 
-import (
+/*import (
 	"context"
 	"errors"
 	"log"
@@ -128,3 +128,4 @@ func contextWithUserID(ctx context.Context, userID int) context.Context {
 	ctx = context.WithValue(ctx, models.IDContextKey, strconv.Itoa(userID))
 	return ctx
 }
+*/
