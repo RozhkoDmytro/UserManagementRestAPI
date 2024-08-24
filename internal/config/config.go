@@ -11,6 +11,7 @@ import (
 type Config struct {
 	AppPort     string `required:"true" split_words:"true"`
 	PostgresURI string `required:"true" split_words:"true"`
+	RedisURL    string `required:"true" split_words:"true"`
 	JwtKey      string `required:"true" split_words:"true"`
 }
 

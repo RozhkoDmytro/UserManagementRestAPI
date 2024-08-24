@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/handlers"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
@@ -22,6 +23,7 @@ import (
 
 type server struct {
 	db          *gorm.DB
+	cache       *cache.RedisClient
 	router      Router
 	logger      *zap.SugaredLogger
 	validator   *validator.Validate
@@ -69,6 +71,8 @@ func Run() {
 		logger.Sugar().Fatal(err)
 	}
 
+	cache := cache.NewRedisClient(cfg.RedisURL)
+
 	userRepo := repositories.NewUserRepo(db, logger.Sugar())
 	voteRepo := repositories.NewVoteRepo(db, logger.Sugar())
 	userService := services.NewUserService(userRepo, voteRepo, logger.Sugar())
@@ -80,6 +84,7 @@ func Run() {
 	srvRouter := &router{mux: mux.NewRouter()}
 	srv := &server{
 		db:          db,
+		cache:       cache,
 		router:      srvRouter,
 		logger:      logger.Sugar(),
 		validator:   validate,
