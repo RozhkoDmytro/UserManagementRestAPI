@@ -27,10 +27,6 @@ type UserRepoInterface interface {
 	CountUsers(ctx context.Context) (int, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	GetUserByID(ctx context.Context, userID uint) (*models.User, error)
-	GetVote(ctx context.Context, userID uint, profileID uint) (*models.Vote, error)
-	CreateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
-	UpdateVote(ctx context.Context, vote *models.Vote) (*models.Vote, error)
-	DeleteVote(ctx context.Context, userID uint, profileID uint) error
 }
 
 func NewUserRepo(db *gorm.DB, logger *zap.SugaredLogger) *UserRepo {

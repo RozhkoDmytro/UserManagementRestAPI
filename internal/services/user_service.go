@@ -14,6 +14,7 @@ import (
 
 type UserService struct {
 	userRepo repositories.UserRepoInterface
+	voteRepo repositories.VoteRepoInterface
 	logger   *zap.SugaredLogger
 }
 
@@ -29,9 +30,10 @@ type UserServiceInterface interface {
 	RevokeVote(ctx context.Context, userID uint, profileID uint) error
 }
 
-func NewUserService(userRepo repositories.UserRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
+func NewUserService(userRepo repositories.UserRepoInterface, voteRepo repositories.VoteRepoInterface, logger *zap.SugaredLogger) UserServiceInterface {
 	return &UserService{
 		userRepo: userRepo,
+		voteRepo: voteRepo,
 		logger:   logger,
 	}
 }
@@ -121,7 +123,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, 
 	}
 
 	// Check if the user has already voted for this profile
-	existingVote, err := service.userRepo.GetVote(ctx, vote.UserID, vote.ProfileID)
+	existingVote, err := service.voteRepo.GetVote(ctx, vote.UserID, vote.ProfileID)
 	if err != nil && err != gorm.ErrRecordNotFound {
 		service.logger.Error("Failed to check existing vote", zap.Error(err))
 		return 0, apperrors.InsertionFailedErr.AppendMessage(err.Error())
@@ -130,7 +132,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, 
 	if existingVote != nil {
 		// Update existing vote
 		existingVote.Value = vote.Value
-		_, err = service.userRepo.UpdateVote(ctx, existingVote)
+		_, err = service.voteRepo.UpdateVote(ctx, existingVote)
 		if err != nil {
 			service.logger.Error("Failed to update vote", zap.Error(err))
 			return 0, apperrors.UpdateFailedErr.AppendMessage(err.Error())
@@ -139,7 +141,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, 
 	}
 
 	// Create new vote
-	insertedVote, err := service.userRepo.CreateVote(ctx, vote)
+	insertedVote, err := service.voteRepo.CreateVote(ctx, vote)
 	if err != nil {
 		service.logger.Error("Failed to create vote", zap.Error(err))
 		return 0, apperrors.InsertionFailedErr.AppendMessage(err.Error())
@@ -150,7 +152,7 @@ func (service *UserService) Vote(ctx context.Context, vote *models.Vote) (uint, 
 
 func (service *UserService) RevokeVote(ctx context.Context, userID uint, profileID uint) error {
 	// Proceed to delete the vote
-	err := service.userRepo.DeleteVote(ctx, userID, profileID)
+	err := service.voteRepo.DeleteVote(ctx, userID, profileID)
 	if err != nil {
 		return err
 	}

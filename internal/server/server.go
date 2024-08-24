@@ -69,7 +69,9 @@ func Run() {
 		logger.Sugar().Fatal(err)
 	}
 
-	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
+	userRepo := repositories.NewUserRepo(db, logger.Sugar())
+	voteRepo := repositories.NewVoteRepo(db, logger.Sugar())
+	userService := services.NewUserService(userRepo, voteRepo, logger.Sugar())
 
 	// Initialize validator
 	validate := validator.New()
