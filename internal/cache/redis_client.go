@@ -14,11 +14,16 @@ type RedisClient struct {
 }
 
 func NewRedisClient(redisURL string) *RedisClient {
-	rdb := redis.NewClient(&redis.Options{
-		Addr: redisURL,
-	})
+	// Parse the Redis URL
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		log.Fatalf("Could not parse Redis URL: %v", err)
+	}
 
-	_, err := rdb.Ping(ctx).Result()
+	// Create a new Redis client using the parsed options
+	rdb := redis.NewClient(opt)
+
+	_, err = rdb.Ping(ctx).Result()
 	if err != nil {
 		log.Fatalf("Could not connect to Redis: %v", err)
 	}

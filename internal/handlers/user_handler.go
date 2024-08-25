@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/go-playground/validator"
+	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
@@ -179,13 +182,29 @@ func (h *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := vars["id"]
 	ctx := r.Context()
 
-	user, err := h.userService.GetUser(ctx, userID)
-	if err != nil {
-		h.sendError(w, err, http.StatusNotFound)
-		return
-	}
+	cachedUser, err := h.cache.Client.Get(ctx, userID).Result()
+	if err == redis.Nil {
+		// No data in cache
+		user, err := h.userService.GetUser(ctx, userID)
+		if err != nil {
+			h.sendError(w, err, http.StatusNotFound)
+			return
+		}
+		// Save in Redis for 1 minute
+		err = h.cache.Client.Set(ctx, userID, user, time.Minute).Err()
+		if err != nil {
+			http.Error(w, "Could not cache user", http.StatusInternalServerError)
+			return
+		}
 
-	h.respond(w, user, http.StatusCreated)
+		h.respond(w, user, http.StatusCreated)
+
+	} else if err != nil {
+		// Error in cache
+		h.sendError(w, err, http.StatusInternalServerError)
+	} else {
+		h.respond(w, cachedUser, http.StatusCreated)
+	}
 }
 
 func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
@@ -195,18 +214,58 @@ func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	page := queryParams.Get("page")
 	pageSize := queryParams.Get("page_size")
 
+	// Validate the query parameters
 	intPage, intPageSize, err := h.validateListUsersParam(page, pageSize)
 	if err != nil {
 		h.sendError(w, err, http.StatusBadRequest)
 		return
 	}
-	users, err := h.userService.ListUsers(ctx, intPage, intPageSize)
-	if err != nil {
-		h.sendError(w, err, http.StatusBadRequest)
-		return
-	}
 
-	h.respond(w, users, http.StatusOK)
+	// Generate a cache key based on page and page size
+	cacheKey := fmt.Sprintf("users_list_page_%d_size_%d", intPage, intPageSize)
+
+	// Check if data is available in Redis cache
+	cachedUsers, err := h.cache.Client.Get(ctx, cacheKey).Result()
+	if err == redis.Nil {
+		// If data is not in cache, fetch from the database
+		users, err := h.userService.ListUsers(ctx, intPage, intPageSize)
+		if err != nil {
+			h.sendError(w, err, http.StatusBadRequest)
+			return
+		}
+
+		// Serialize the data into JSON for caching
+		usersJSON, err := json.Marshal(users)
+		if err != nil {
+			h.sendError(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		// Store the serialized data in Redis with a timeout of 1 minute
+		err = h.cache.Client.Set(ctx, cacheKey, usersJSON, time.Minute).Err()
+		if err != nil {
+			h.sendError(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		// Send the response with the user data from the database
+		h.respond(w, users, http.StatusOK)
+	} else if err != nil {
+		// Handle Redis errors
+		h.sendError(w, err, http.StatusInternalServerError)
+		return
+	} else {
+		// If data is found in the cache, deserialize it from JSON
+		var users []models.User
+		err := json.Unmarshal([]byte(cachedUsers), &users)
+		if err != nil {
+			h.sendError(w, err, http.StatusInternalServerError)
+			return
+		}
+
+		// Send the cached response to the client
+		h.respond(w, users, http.StatusOK)
+	}
 }
 
 func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
@@ -214,15 +273,33 @@ func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
-	count, err := h.userService.CountUsers(ctx)
-	if err != nil {
-		h.sendError(w, err, http.StatusBadRequest)
-		return
+
+	cachedCount, err := h.cache.Client.Get(ctx, "count").Result()
+	if err == redis.Nil {
+		// No data in cache
+		count, err := h.userService.CountUsers(ctx)
+		if err != nil {
+			h.sendError(w, err, http.StatusBadRequest)
+			return
+		}
+		res := &CreateUserResponse{
+			Count: uint(count),
+		}
+
+		// Save in Redis for 1 minute
+		err = h.cache.Client.Set(ctx, "count", count, time.Minute).Err()
+		if err != nil {
+			http.Error(w, "Could not cache user", http.StatusInternalServerError)
+			return
+		}
+
+		h.respond(w, res, http.StatusOK)
+	} else if err != nil {
+		// Error in cache
+		h.sendError(w, err, http.StatusInternalServerError)
+	} else {
+		h.respond(w, cachedCount, http.StatusCreated)
 	}
-	res := &CreateUserResponse{
-		Count: uint(count),
-	}
-	h.respond(w, res, http.StatusOK)
 }
 
 func (h *userHandler) validateListUsersParam(page, pageSize string) (validPage, validPageSize int, err error) {
