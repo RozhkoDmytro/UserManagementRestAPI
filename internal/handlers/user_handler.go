@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-playground/validator"
-	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
@@ -183,27 +182,35 @@ func (h *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	cachedUser, err := h.cache.Client.Get(ctx, userID).Result()
-	if err == redis.Nil {
+	if err != nil {
 		// No data in cache
 		user, err := h.userService.GetUser(ctx, userID)
 		if err != nil {
 			h.sendError(w, err, http.StatusNotFound)
 			return
 		}
+		// Serialize user object to JSON string
+		userData, err := json.Marshal(user)
+		if err != nil {
+			http.Error(w, "Error serializing user: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
 		// Save in Redis for 1 minute
-		err = h.cache.Client.Set(ctx, userID, user, time.Minute).Err()
+		err = h.cache.Client.Set(ctx, userID, userData, time.Minute).Err()
 		if err != nil {
 			http.Error(w, "Could not cache user", http.StatusInternalServerError)
 			return
 		}
-
 		h.respond(w, user, http.StatusCreated)
-
-	} else if err != nil {
-		// Error in cache
-		h.sendError(w, err, http.StatusInternalServerError)
 	} else {
-		h.respond(w, cachedUser, http.StatusCreated)
+		// Deserialize JSON data back to User struct
+		var user models.User
+		err := json.Unmarshal([]byte(cachedUser), &user)
+		if err != nil {
+			http.Error(w, "Error deserializing user: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		h.respond(w, user, http.StatusOK)
 	}
 }
 
@@ -226,7 +233,7 @@ func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	// Check if data is available in Redis cache
 	cachedUsers, err := h.cache.Client.Get(ctx, cacheKey).Result()
-	if err == redis.Nil {
+	if err != nil {
 		// If data is not in cache, fetch from the database
 		users, err := h.userService.ListUsers(ctx, intPage, intPageSize)
 		if err != nil {
@@ -250,10 +257,6 @@ func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 		// Send the response with the user data from the database
 		h.respond(w, users, http.StatusOK)
-	} else if err != nil {
-		// Handle Redis errors
-		h.sendError(w, err, http.StatusInternalServerError)
-		return
 	} else {
 		// If data is found in the cache, deserialize it from JSON
 		var users []models.User
@@ -273,9 +276,9 @@ func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
-
 	cachedCount, err := h.cache.Client.Get(ctx, "count").Result()
-	if err == redis.Nil {
+
+	if err != nil {
 		// No data in cache
 		count, err := h.userService.CountUsers(ctx)
 		if err != nil {
@@ -285,20 +288,19 @@ func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 		res := &CreateUserResponse{
 			Count: uint(count),
 		}
-
 		// Save in Redis for 1 minute
 		err = h.cache.Client.Set(ctx, "count", count, time.Minute).Err()
 		if err != nil {
-			http.Error(w, "Could not cache user", http.StatusInternalServerError)
+			h.sendError(w, err, http.StatusInternalServerError)
 			return
 		}
-
 		h.respond(w, res, http.StatusOK)
-	} else if err != nil {
-		// Error in cache
-		h.sendError(w, err, http.StatusInternalServerError)
 	} else {
-		h.respond(w, cachedCount, http.StatusCreated)
+		num, _ := strconv.Atoi(cachedCount)
+		res := &CreateUserResponse{
+			Count: uint(num),
+		}
+		h.respond(w, res, http.StatusCreated)
 	}
 }
 
