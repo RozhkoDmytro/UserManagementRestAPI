@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
+	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	"go.uber.org/zap"
@@ -16,9 +17,9 @@ type loginHandler struct {
 	cfg         *config.Config
 }
 
-func NewLoginHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config) *loginHandler {
+func NewLoginHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config, cache *cache.RedisClient) *loginHandler {
 	return &loginHandler{
-		BaseHandler: NewBaseHandler(logger),
+		BaseHandler: NewBaseHandler(logger, cache),
 		userService: userService,
 		logger:      logger,
 		cfg:         cfg,

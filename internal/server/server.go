@@ -36,9 +36,9 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) initializeRoutes() {
-	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg)
-	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg)
-	votesHandler := handlers.NewVotesHandler(srv.userService, srv.logger, srv.cfg)
+	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg, srv.cache)
+	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
+	votesHandler := handlers.NewVotesHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
 
 	srv.router.Post("/users", srv.contextExpire(userHandler.CreateUserHandler))
 	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(userHandler.GetUser))

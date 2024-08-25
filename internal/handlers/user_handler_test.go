@@ -34,7 +34,7 @@ func TestCreateUserHandler(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	reqBody := &CreateUserRequest{
 		Email:     "test@example.com",
@@ -82,7 +82,7 @@ func TestDeleteUser(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	req := httptest.NewRequest(http.MethodDelete, "/users/123", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
@@ -117,7 +117,7 @@ func TestGetUser(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/users/123", nil)
 	req = mux.SetURLVars(req, map[string]string{"id": "123"})
@@ -153,7 +153,7 @@ func TestListUsers(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	w := httptest.NewRecorder()
@@ -190,7 +190,7 @@ func TestCountUsers(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/users/count", nil)
 	w := httptest.NewRecorder()
@@ -227,7 +227,7 @@ func TestUpdateUser(t *testing.T) {
 
 	cfg := &config.Config{}
 
-	handler := NewUserHandler(mockUserService, logger, validate, cfg)
+	handler := NewUserHandler(mockUserService, logger, validate, cfg, nil)
 
 	reqBody := &CreateUserRequest{
 		Email:     "test@example.com",

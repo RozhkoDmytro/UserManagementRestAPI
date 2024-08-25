@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
@@ -20,9 +21,9 @@ type votesHandler struct {
 	cfg         *config.Config
 }
 
-func NewVotesHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config) *votesHandler {
+func NewVotesHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, cfg *config.Config, cache *cache.RedisClient) *votesHandler {
 	return &votesHandler{
-		BaseHandler: NewBaseHandler(logger),
+		BaseHandler: NewBaseHandler(logger, cache),
 		userService: userService,
 		logger:      logger,
 		cfg:         cfg,

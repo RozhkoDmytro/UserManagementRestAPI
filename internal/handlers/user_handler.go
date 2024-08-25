@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-playground/validator"
 	"github.com/gorilla/mux"
+	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/config"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"gitlab.com/jkozhemiaka/web-layout/internal/passwords"
@@ -24,9 +25,9 @@ type userHandler struct {
 	cfg         *config.Config
 }
 
-func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config) *userHandler {
+func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config, cache *cache.RedisClient) *userHandler {
 	return &userHandler{
-		BaseHandler: NewBaseHandler(logger),
+		BaseHandler: NewBaseHandler(logger, cache),
 		userService: userService,
 		logger:      logger,
 		validator:   validator,
