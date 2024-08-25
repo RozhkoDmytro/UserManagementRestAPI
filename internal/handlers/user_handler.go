@@ -27,7 +27,7 @@ type userHandler struct {
 	cfg         *config.Config
 }
 
-func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config, cache *cache.RedisClient) *userHandler {
+func NewUserHandler(userService services.UserServiceInterface, logger *zap.SugaredLogger, validator *validator.Validate, cfg *config.Config, cache cache.CacheInterface) *userHandler {
 	return &userHandler{
 		BaseHandler: NewBaseHandler(logger, cache),
 		userService: userService,

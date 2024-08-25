@@ -12,10 +12,10 @@ import (
 
 type BaseHandler struct {
 	logger *zap.SugaredLogger
-	cache  *cache.RedisClient
+	cache  cache.CacheInterface
 }
 
-func NewBaseHandler(logger *zap.SugaredLogger, cache *cache.RedisClient) *BaseHandler {
+func NewBaseHandler(logger *zap.SugaredLogger, cache cache.CacheInterface) *BaseHandler {
 	return &BaseHandler{
 		logger: logger,
 		cache:  cache,
