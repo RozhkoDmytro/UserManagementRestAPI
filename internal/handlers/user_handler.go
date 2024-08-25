@@ -181,8 +181,8 @@ func (h *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 	userID := vars["id"]
 	ctx := r.Context()
 
-	cachedUser, err := h.cache.Client.Get(ctx, userID).Result()
-	if err != nil {
+	cachedUser, err := h.cache.Get(ctx, userID)
+	if err == nil {
 		// No data in cache
 		user, err := h.userService.GetUser(ctx, userID)
 		if err != nil {
@@ -196,7 +196,7 @@ func (h *userHandler) GetUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Save in Redis for 1 minute
-		err = h.cache.Client.Set(ctx, userID, userData, time.Minute).Err()
+		err = h.cache.Set(ctx, userID, string(userData))
 		if err != nil {
 			http.Error(w, "Could not cache user", http.StatusInternalServerError)
 			return
@@ -232,8 +232,8 @@ func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	cacheKey := fmt.Sprintf("users_list_page_%d_size_%d", intPage, intPageSize)
 
 	// Check if data is available in Redis cache
-	cachedUsers, err := h.cache.Client.Get(ctx, cacheKey).Result()
-	if err != nil {
+	cachedUsers, err := h.cache.Get(ctx, cacheKey)
+	if err == nil {
 		// If data is not in cache, fetch from the database
 		users, err := h.userService.ListUsers(ctx, intPage, intPageSize)
 		if err != nil {
@@ -249,7 +249,7 @@ func (h *userHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Store the serialized data in Redis with a timeout of 1 minute
-		err = h.cache.Client.Set(ctx, cacheKey, usersJSON, time.Minute).Err()
+		err = h.cache.Set(ctx, cacheKey, string(usersJSON))
 		if err != nil {
 			h.sendError(w, err, http.StatusInternalServerError)
 			return
@@ -276,9 +276,9 @@ func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 		Count uint `json:"count"`
 	}
 	ctx := r.Context()
-	cachedCount, err := h.cache.Client.Get(ctx, "count").Result()
+	cachedCount, err := h.cache.Get(ctx, "count")
 
-	if err != nil {
+	if err == nil {
 		// No data in cache
 		count, err := h.userService.CountUsers(ctx)
 		if err != nil {
@@ -289,7 +289,7 @@ func (h *userHandler) CountUsers(w http.ResponseWriter, r *http.Request) {
 			Count: uint(count),
 		}
 		// Save in Redis for 1 minute
-		err = h.cache.Client.Set(ctx, "count", count, time.Minute).Err()
+		err = h.cache.Set(ctx, "count", strconv.Itoa(count))
 		if err != nil {
 			h.sendError(w, err, http.StatusInternalServerError)
 			return
