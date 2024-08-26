@@ -19,7 +19,19 @@ CREATE TABLE IF NOT EXISTS users (
     role_id INT REFERENCES roles(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP WITH TIME ZONE
+    vote_updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    rating INT NOT NULL DEFAULT 0
+);
+
+-- Create votes table
+CREATE TABLE IF NOT EXISTS votes (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    profile_id INTEGER REFERENCES users(id),
+    value INTEGER NOT NULL CHECK (value IN (-1, 1)),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, profile_id)
 );
 
 -- Set default role for existing users

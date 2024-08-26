@@ -54,6 +54,31 @@ var (
 		Code:     "NO_RECORD_FOUND",
 		HTTPCode: 404,
 	}
+
+	// Define the vote cooldown error
+	VoteCooldownErr = AppError{
+		Message:  "You can only vote once per hour",
+		Code:     "VOTE_COOLDOWN_ERR",
+		HTTPCode: http.StatusTooManyRequests,
+	}
+	// Add the update failed error
+	UpdateFailedErr = AppError{
+		Message:  "Failed to update the record",
+		Code:     "UPDATE_FAILED_ERR",
+		HTTPCode: http.StatusInternalServerError,
+	}
+
+	VoteAlreadyExistsErr = AppError{
+		Message:  "You have already voted for this profile",
+		Code:     "VOTE_ALREADY_EXISTS",
+		HTTPCode: 409, // HTTP 409 Conflict, as the action cannot be performed due to existing state
+	}
+
+	UnauthorizedErr = AppError{
+		Message:  "Unauthorized action",
+		Code:     "UNAUTHORIZED_ERR",
+		HTTPCode: http.StatusUnauthorized,
+	}
 )
 
 func (appError *AppError) Error() string {

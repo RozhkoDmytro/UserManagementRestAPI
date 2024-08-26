@@ -8,17 +8,8 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/mux"
 	"gitlab.com/jkozhemiaka/web-layout/internal/auth"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
-)
-
-// Define a custom type for the context key
-type contextKey string
-
-const (
-	RoleContextKey  contextKey = "role"
-	EmailContextKey contextKey = "email"
 )
 
 func (srv *server) contextExpire(h http.HandlerFunc) http.HandlerFunc {
@@ -49,19 +40,15 @@ func (srv *server) jwtMiddleware(h http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "Invalid token", http.StatusUnauthorized)
 			return
 		}
-
-		if claims.Role == "" || claims.Email == "" {
-			http.Error(w, "token haven't info about Role,Email", http.StatusUnauthorized)
+		ID := strconv.FormatUint(uint64(claims.ID), 10)
+		if claims.Role == "" || claims.Email == "" || ID == "" {
+			http.Error(w, "token haven't info about Role,Email,ID", http.StatusUnauthorized)
 			return
 		}
-		vars := mux.Vars(r)
-		userID := vars["id"]
-		if claims.Role == models.StrUser && userID == strconv.FormatUint(uint64(claims.ID), 10) {
-			claims.Role = models.StrModerator // only for yourself account
-		}
 
-		ctx := context.WithValue(r.Context(), RoleContextKey, claims.Role)
-		ctx = context.WithValue(ctx, EmailContextKey, claims.Email)
+		ctx := context.WithValue(r.Context(), models.RoleContextKey, claims.Role)
+		ctx = context.WithValue(ctx, models.EmailContextKey, claims.Email)
+		ctx = context.WithValue(ctx, models.IDContextKey, ID)
 		r = r.WithContext(ctx)
 		h(w, r)
 	}

@@ -35,11 +35,26 @@ func (m *MockUserServiceInterface) EXPECT() *MockUserServiceInterfaceMockRecorde
 	return m.recorder
 }
 
+// CountUsers mocks base method.
+func (m *MockUserServiceInterface) CountUsers(ctx context.Context) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountUsers", ctx)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountUsers indicates an expected call of CountUsers.
+func (mr *MockUserServiceInterfaceMockRecorder) CountUsers(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountUsers", reflect.TypeOf((*MockUserServiceInterface)(nil).CountUsers), ctx)
+}
+
 // CreateUser mocks base method.
-func (m *MockUserServiceInterface) CreateUser(ctx context.Context, user *models.User) (string, error) {
+func (m *MockUserServiceInterface) CreateUser(ctx context.Context, user *models.User) (uint, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", ctx, user)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(uint)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -80,11 +95,26 @@ func (mr *MockUserServiceInterfaceMockRecorder) GetUser(ctx, userID interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUser", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUser), ctx, userID)
 }
 
+// GetUserByEmail mocks base method.
+func (m *MockUserServiceInterface) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserByEmail", ctx, email)
+	ret0, _ := ret[0].(*models.User)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserByEmail indicates an expected call of GetUserByEmail.
+func (mr *MockUserServiceInterfaceMockRecorder) GetUserByEmail(ctx, email interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserByEmail", reflect.TypeOf((*MockUserServiceInterface)(nil).GetUserByEmail), ctx, email)
+}
+
 // ListUsers mocks base method.
-func (m *MockUserServiceInterface) ListUsers(ctx context.Context, page, pageSize string) ([]*models.User, error) {
+func (m *MockUserServiceInterface) ListUsers(ctx context.Context, page, pageSize int) ([]models.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListUsers", ctx, page, pageSize)
-	ret0, _ := ret[0].([]*models.User)
+	ret0, _ := ret[0].([]models.User)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -93,6 +123,20 @@ func (m *MockUserServiceInterface) ListUsers(ctx context.Context, page, pageSize
 func (mr *MockUserServiceInterfaceMockRecorder) ListUsers(ctx, page, pageSize interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUsers", reflect.TypeOf((*MockUserServiceInterface)(nil).ListUsers), ctx, page, pageSize)
+}
+
+// RevokeVote mocks base method.
+func (m *MockUserServiceInterface) RevokeVote(ctx context.Context, userID, profileID uint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeVote", ctx, userID, profileID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeVote indicates an expected call of RevokeVote.
+func (mr *MockUserServiceInterfaceMockRecorder) RevokeVote(ctx, userID, profileID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeVote", reflect.TypeOf((*MockUserServiceInterface)(nil).RevokeVote), ctx, userID, profileID)
 }
 
 // UpdateUser mocks base method.
@@ -108,4 +152,19 @@ func (m *MockUserServiceInterface) UpdateUser(ctx context.Context, userID string
 func (mr *MockUserServiceInterfaceMockRecorder) UpdateUser(ctx, userID, user interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateUser", reflect.TypeOf((*MockUserServiceInterface)(nil).UpdateUser), ctx, userID, user)
+}
+
+// Vote mocks base method.
+func (m *MockUserServiceInterface) Vote(ctx context.Context, vote *models.Vote) (uint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Vote", ctx, vote)
+	ret0, _ := ret[0].(uint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Vote indicates an expected call of Vote.
+func (mr *MockUserServiceInterfaceMockRecorder) Vote(ctx, vote interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Vote", reflect.TypeOf((*MockUserServiceInterface)(nil).Vote), ctx, vote)
 }

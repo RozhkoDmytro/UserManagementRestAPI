@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
+	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
+	"gitlab.com/jkozhemiaka/web-layout/internal/handlers"
 	"gitlab.com/jkozhemiaka/web-layout/internal/repositories"
 	"gitlab.com/jkozhemiaka/web-layout/internal/services"
 	myValidate "gitlab.com/jkozhemiaka/web-layout/internal/validate"
@@ -21,9 +23,10 @@ import (
 
 type server struct {
 	db          *gorm.DB
+	cache       *cache.RedisClient
 	router      Router
 	logger      *zap.SugaredLogger
-	validate    *validator.Validate
+	validator   *validator.Validate
 	cfg         *config.Config
 	userService services.UserServiceInterface
 }
@@ -33,13 +36,22 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) initializeRoutes() {
-	srv.router.Post("/users", srv.contextExpire(srv.createUserHandler))
-	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(srv.getUser))
-	srv.router.Delete("/users/{id}", srv.jwtMiddleware(srv.deleteUser))
-	srv.router.Update("/users/{id}", srv.jwtMiddleware(srv.updateUser))
-	srv.router.Get("/users", srv.contextExpire(srv.listUsers))
-	srv.router.Get("/users/count", srv.contextExpire(srv.countUsers))
-	srv.router.Post("/login", srv.contextExpire(srv.login))
+	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg, srv.cache)
+	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
+	votesHandler := handlers.NewVotesHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
+
+	srv.router.Post("/users", srv.contextExpire(userHandler.CreateUserHandler))
+	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(userHandler.GetUser))
+	srv.router.Delete("/users/{id:[0-9]+}", srv.jwtMiddleware(userHandler.DeleteUser))
+	srv.router.Update("/users/{id:[0-9]+}", srv.jwtMiddleware(userHandler.UpdateUser))
+	srv.router.Get("/users", srv.contextExpire(userHandler.ListUsers))
+	srv.router.Get("/users/count", srv.contextExpire(userHandler.CountUsers))
+
+	srv.router.Post("/login", srv.contextExpire(loginHandler.Login))
+
+	srv.router.Post("/like/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Like))
+	srv.router.Post("/dislike/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Dislike))
+	srv.router.Delete("/revoke/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.RevokeVote))
 }
 
 func Run() {
@@ -59,7 +71,11 @@ func Run() {
 		logger.Sugar().Fatal(err)
 	}
 
-	userService := services.NewUserService(repositories.NewUserRepo(db, logger.Sugar()), logger.Sugar())
+	cache := cache.NewRedisClient(cfg.RedisURL)
+
+	userRepo := repositories.NewUserRepo(db, logger.Sugar())
+	voteRepo := repositories.NewVoteRepo(db, logger.Sugar())
+	userService := services.NewUserService(userRepo, voteRepo, logger.Sugar())
 
 	// Initialize validator
 	validate := validator.New()
@@ -68,9 +84,10 @@ func Run() {
 	srvRouter := &router{mux: mux.NewRouter()}
 	srv := &server{
 		db:          db,
+		cache:       cache,
 		router:      srvRouter,
 		logger:      logger.Sugar(),
-		validate:    validate,
+		validator:   validate,
 		cfg:         cfg,
 		userService: userService,
 	}
