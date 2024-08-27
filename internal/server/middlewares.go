@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -33,7 +32,6 @@ func (srv *server) contextExpire(h http.HandlerFunc, keyGen CacheKeyGenerator, c
 
 		cachedData, err := srv.cache.Get(ctx, cacheKey, cacheTTL)
 		if err == nil {
-			fmt.Println("1")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(cachedData))
 			return
@@ -50,7 +48,6 @@ func (srv *server) contextExpire(h http.HandlerFunc, keyGen CacheKeyGenerator, c
 		}
 		h(bufferedWriter, r)
 		if bufferedWriter.statusCode == http.StatusOK || bufferedWriter.statusCode == http.StatusCreated {
-			fmt.Println("2")
 			err := srv.cache.Set(ctx, cacheKey, responseBuffer.String(), cacheTTL)
 			if err != nil {
 				log.Printf("Error caching response: %v", err)
