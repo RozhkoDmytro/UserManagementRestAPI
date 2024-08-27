@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"gitlab.com/jkozhemiaka/web-layout/internal/apperrors"
 	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
@@ -23,7 +24,7 @@ import (
 
 type server struct {
 	db          *gorm.DB
-	cache       *cache.RedisClient
+	cache       cache.CacheInterface
 	router      Router
 	logger      *zap.SugaredLogger
 	validator   *validator.Validate
@@ -36,18 +37,19 @@ func (srv *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (srv *server) initializeRoutes() {
-	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg, srv.cache)
-	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
-	votesHandler := handlers.NewVotesHandler(srv.userService, srv.logger, srv.cfg, srv.cache)
+	userHandler := handlers.NewUserHandler(srv.userService, srv.logger, srv.validator, srv.cfg)
+	loginHandler := handlers.NewLoginHandler(srv.userService, srv.logger, srv.cfg)
+	votesHandler := handlers.NewVotesHandler(srv.userService, srv.logger, srv.cfg)
 
-	srv.router.Post("/users", srv.contextExpire(userHandler.CreateUserHandler))
-	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(userHandler.GetUser))
+	srv.router.Post("/users", srv.contextExpire(userHandler.CreateUserHandler, nil, time.Minute))
 	srv.router.Delete("/users/{id:[0-9]+}", srv.jwtMiddleware(userHandler.DeleteUser))
 	srv.router.Update("/users/{id:[0-9]+}", srv.jwtMiddleware(userHandler.UpdateUser))
-	srv.router.Get("/users", srv.contextExpire(userHandler.ListUsers))
-	srv.router.Get("/users/count", srv.contextExpire(userHandler.CountUsers))
 
-	srv.router.Post("/login", srv.contextExpire(loginHandler.Login))
+	srv.router.Get("/users", srv.contextExpire(userHandler.ListUsers, generateUsersListCacheKey, time.Minute))
+	srv.router.Get("/users/{id:[0-9]+}", srv.contextExpire(userHandler.GetUser, generateUserCacheKey, time.Minute))
+	srv.router.Get("/users/count", srv.contextExpire(userHandler.CountUsers, generateCountUsersCacheKey, time.Minute))
+
+	srv.router.Post("/login", srv.contextExpire(loginHandler.Login, nil, time.Minute))
 
 	srv.router.Post("/like/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Like))
 	srv.router.Post("/dislike/{id:[0-9]+}", srv.jwtMiddleware(votesHandler.Dislike))
@@ -98,4 +100,23 @@ func Run() {
 	if err != nil {
 		logger.Sugar().Fatal(err)
 	}
+}
+
+// Функція для генерації ключа кешу для отримання користувача
+func generateUserCacheKey(r *http.Request) string {
+	vars := mux.Vars(r)
+	return "user:" + vars["id"]
+}
+
+// Функція для генерації ключа кешу для списку користувачів
+func generateUsersListCacheKey(r *http.Request) string {
+	queryParams := r.URL.Query()
+	page := queryParams.Get("page")
+	pageSize := queryParams.Get("page_size")
+	return fmt.Sprintf("users_list_page_%s_size_%s", page, pageSize)
+}
+
+// Функція для генерації ключа кешу для підрахунку користувачів
+func generateCountUsersCacheKey(r *http.Request) string {
+	return "count_users"
 }
