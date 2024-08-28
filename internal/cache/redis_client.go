@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"errors"
 	"log"
 	"time"
 
@@ -11,8 +12,8 @@ import (
 var ctx = context.Background()
 
 type CacheInterface interface {
-	Get(ctx context.Context, key string) (string, error)
-	Set(ctx context.Context, key string, value string) error
+	Get(ctx context.Context, key string, cacheTTL time.Duration) (string, error)
+	Set(ctx context.Context, key string, value string, cacheTTL time.Duration) error
 }
 
 type RedisClient struct {
@@ -38,23 +39,23 @@ func NewRedisClient(redisURL string) *RedisClient {
 }
 
 // Get отримує значення за ключем з Redis
-func (r *RedisClient) Get(ctx context.Context, key string) (string, error) {
+func (r *RedisClient) Get(ctx context.Context, key string, cacheTTL time.Duration) (string, error) {
 	val, err := r.Client.Get(ctx, key).Result()
 	if err == redis.Nil {
-		// Ключ не існує
-		return "", nil
+		// Key does not exist
+		return "", errors.New("key does not exist")
 	} else if err != nil {
-		// Помилка під час виконання запиту
+		// Error during query execution
 		return "", err
 	}
 	return val, nil
 }
 
 // Set зберігає значення за ключем у Redis
-func (r *RedisClient) Set(ctx context.Context, key string, value string) error {
-	err := r.Client.Set(ctx, key, value, time.Minute).Err()
+func (r *RedisClient) Set(ctx context.Context, key string, value string, cacheTTL time.Duration) error {
+	err := r.Client.Set(ctx, key, value, cacheTTL).Err()
 	if err != nil {
-		// Помилка під час виконання запиту
+		// Error during query execution
 		return err
 	}
 	return nil

@@ -5,20 +5,17 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"gitlab.com/jkozhemiaka/web-layout/internal/cache"
 	"gitlab.com/jkozhemiaka/web-layout/internal/models"
 	"go.uber.org/zap"
 )
 
 type BaseHandler struct {
 	logger *zap.SugaredLogger
-	cache  cache.CacheInterface
 }
 
-func NewBaseHandler(logger *zap.SugaredLogger, cache cache.CacheInterface) *BaseHandler {
+func NewBaseHandler(logger *zap.SugaredLogger) *BaseHandler {
 	return &BaseHandler{
 		logger: logger,
-		cache:  cache,
 	}
 }
 
